@@ -39,23 +39,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $user = $stmt->fetch();
                 
                 // Verify password using bcrypt
-                if ($user && password_verify($password, $user['password'])) {
-                    // Login successful - create session
-                    $_SESSION['user_id'] = $user['id'];
-                    $_SESSION['username'] = $user['username'];
-                    $_SESSION['user_role'] = $user['role'];
-                    $_SESSION['full_name'] = $user['full_name'];
-                    $_SESSION['email'] = $user['email'];
-                    
-                    // Log the login activity
-                    logActivity('User Login', "User {$username} logged in successfully");
-                    
-                    // Redirect to dashboard
-                    header("Location: dashboard.php");
-                    exit();
+                if ($user) {
+                    if (password_verify($password, $user['password'])) {
+                        // Login successful - create session
+                        $_SESSION['user_id'] = $user['id'];
+                        $_SESSION['username'] = $user['username'];
+                        $_SESSION['user_role'] = $user['role'];
+                        $_SESSION['full_name'] = $user['full_name'];
+                        $_SESSION['email'] = $user['email'];
+                        
+                        // Update last login
+                        $stmt = $conn->prepare("UPDATE users SET last_login = NOW() WHERE id = ?");
+                        $stmt->execute([$user['id']]);
+                        
+                        // Log the login activity
+                        logActivity('User Login', "User {$username} logged in successfully");
+                        
+                        // Redirect to dashboard
+                        header("Location: dashboard.php");
+                        exit();
+                    } else {
+                        $error_message = 'Invalid password for user: ' . $username;
+                        logActivity('Failed Login Attempt', "Invalid password for username: {$username}");
+                    }
                 } else {
-                    $error_message = 'Invalid username or password.';
-                    logActivity('Failed Login Attempt', "Failed login for username: {$username}");
+                    $error_message = 'User not found: ' . $username;
+                    logActivity('Failed Login Attempt', "User not found: {$username}");
                 }
             } else {
                 $error_message = 'Database connection failed. Please try again later.';
