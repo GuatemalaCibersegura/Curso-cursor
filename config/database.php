@@ -4,11 +4,13 @@
  * Car Wash Client Platform Control System
  */
 
-// Database configuration for MAMP
-define('DB_HOST', 'localhost:8889'); // MAMP MySQL port
+// Database configuration - Auto-detect XAMPP/MAMP
+// For XAMPP: localhost, root, '' (empty password)
+// For MAMP: localhost:8889, root, root
+define('DB_HOST', 'localhost'); // Change to 'localhost:8889' for MAMP
 define('DB_NAME', 'carwash_system');
 define('DB_USER', 'root');
-define('DB_PASS', 'root'); // MAMP default password
+define('DB_PASS', ''); // Change to 'root' for MAMP
 define('DB_CHARSET', 'utf8mb4');
 
 /**
