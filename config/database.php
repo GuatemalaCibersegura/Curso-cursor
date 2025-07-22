@@ -4,11 +4,11 @@
  * Car Wash Client Platform Control System
  */
 
-// Database configuration
-define('DB_HOST', 'localhost');
+// Database configuration for MAMP
+define('DB_HOST', 'localhost:8889'); // MAMP MySQL port
 define('DB_NAME', 'carwash_system');
 define('DB_USER', 'root');
-define('DB_PASS', '');
+define('DB_PASS', 'root'); // MAMP default password
 define('DB_CHARSET', 'utf8mb4');
 
 /**
@@ -30,11 +30,13 @@ class Database {
         $this->conn = null;
         
         try {
+            // MAMP specific DSN
             $dsn = "mysql:host=" . $this->host . ";dbname=" . $this->db_name . ";charset=" . $this->charset;
             $options = [
                 PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                 PDO::ATTR_EMULATE_PREPARES   => false,
+                PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4"
             ];
             
             $this->conn = new PDO($dsn, $this->username, $this->password, $options);
