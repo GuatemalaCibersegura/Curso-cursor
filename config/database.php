@@ -39,7 +39,14 @@ class Database {
             
             $this->conn = new PDO($dsn, $this->username, $this->password, $options);
         } catch(PDOException $exception) {
+            // Log the error for debugging
             error_log("Connection error: " . $exception->getMessage());
+            
+            // Show more specific error in development
+            if (defined('DEBUG') && DEBUG === true) {
+                die("Database connection failed: " . $exception->getMessage());
+            }
+            
             return null;
         }
 
