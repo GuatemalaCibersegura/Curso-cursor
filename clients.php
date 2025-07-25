@@ -24,7 +24,7 @@ $database = new Database();
 $conn = $database->getConnection();
 
 if (!$conn) {
-    $error_message = 'Database connection failed.';
+    $error_message = 'Database connection failed. Please ensure MySQL server is running and accessible.';
 }
 
 // Handle form submissions
@@ -67,7 +67,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $conn) {
                                 logActivity('Client Added', "New client: {$name} ({$license_plate})");
                                 $action = 'list'; // Redirect to list view
                             } else {
-                                $error_message = 'Failed to register client. Please try again.';
+                                $errorInfo = $stmt->errorInfo();
+                                $error_message = 'Failed to register client: ' . ($errorInfo[2] ?? 'Unknown database error');
+                                error_log("Client registration failed: " . print_r($errorInfo, true));
                             }
                         }
                     } elseif ($action === 'edit' && $client_id) {
@@ -86,7 +88,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $conn) {
                                 logActivity('Client Updated', "Updated client: {$name} ({$license_plate})");
                                 $action = 'list'; // Redirect to list view
                             } else {
-                                $error_message = 'Failed to update client. Please try again.';
+                                $errorInfo = $stmt->errorInfo();
+                                $error_message = 'Failed to update client: ' . ($errorInfo[2] ?? 'Unknown database error');
+                                error_log("Client update failed: " . print_r($errorInfo, true));
                             }
                         }
                     }
