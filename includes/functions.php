@@ -14,9 +14,7 @@ if (session_status() == PHP_SESSION_NONE) {
  * @return bool
  */
 function isLoggedIn() {
-    // TEMPORAL: Siempre devolver true para omitir login
-    return true;
-    // return isset($_SESSION['user_id']) && !empty($_SESSION['user_id']);
+    return isset($_SESSION['user_id']) && !empty($_SESSION['user_id']);
 }
 
 /**
@@ -24,28 +22,16 @@ function isLoggedIn() {
  * @return bool
  */
 function isAdmin() {
-    // TEMPORAL: Siempre devolver true para acceso completo
-    return true;
-    // return isLoggedIn() && $_SESSION['user_role'] === 'admin';
+    return isLoggedIn() && $_SESSION['user_role'] === 'admin';
 }
 
 /**
  * Redirect to login if not authenticated
  */
 function requireLogin() {
-    // TEMPORAL: Comentado para omitir verificación de login
-    // if (!isLoggedIn()) {
-    //     header("Location: login.php");
-    //     exit();
-    // }
-    
-    // Crear sesión temporal para evitar errores
-    if (!isset($_SESSION['user_id'])) {
-        $_SESSION['user_id'] = 1;
-        $_SESSION['username'] = 'admin';
-        $_SESSION['user_role'] = 'admin';
-        $_SESSION['full_name'] = 'Usuario Temporal';
-        $_SESSION['email'] = 'temp@test.com';
+    if (!isLoggedIn()) {
+        header("Location: login.php");
+        exit();
     }
 }
 
@@ -53,20 +39,10 @@ function requireLogin() {
  * Redirect to login if not admin
  */
 function requireAdmin() {
-    // TEMPORAL: Comentado para omitir verificación de admin
-    // requireLogin();
-    // if (!isAdmin()) {
-    //     header("Location: dashboard.php?error=access_denied");
-    //     exit();
-    // }
-    
-    // Crear sesión temporal para evitar errores
-    if (!isset($_SESSION['user_id'])) {
-        $_SESSION['user_id'] = 1;
-        $_SESSION['username'] = 'admin';
-        $_SESSION['user_role'] = 'admin';
-        $_SESSION['full_name'] = 'Usuario Temporal';
-        $_SESSION['email'] = 'temp@test.com';
+    requireLogin();
+    if (!isAdmin()) {
+        header("Location: dashboard.php?error=access_denied");
+        exit();
     }
 }
 

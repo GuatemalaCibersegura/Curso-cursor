@@ -16,58 +16,27 @@ class Database {
     private $charset = DB_CHARSET;
     private $conn;
     
-    // Configuraciones posibles para diferentes entornos
+    // Configuración específica para MAMP puerto 8889
     private $configurations = [
-        // MAMP configuraciones
+        // MAMP puerto 8889 - configuración principal
         [
             'host' => 'localhost:8889',
             'user' => 'root',
             'pass' => 'root',
-            'name' => 'MAMP (Puerto 8889)'
+            'name' => 'MAMP (Puerto 8889 - Principal)'
         ],
-        [
-            'host' => 'localhost:3306',
-            'user' => 'root',
-            'pass' => 'root',
-            'name' => 'MAMP (Puerto 3306)'
-        ],
-        [
-            'host' => 'localhost:8889',
-            'user' => 'root',
-            'pass' => '',
-            'name' => 'MAMP sin contraseña'
-        ],
-        // XAMPP configuraciones
-        [
-            'host' => 'localhost',
-            'user' => 'root',
-            'pass' => '',
-            'name' => 'XAMPP/Local'
-        ],
-        [
-            'host' => 'localhost:3306',
-            'user' => 'root',
-            'pass' => '',
-            'name' => 'MySQL Estándar'
-        ],
-        // Configuraciones alternativas
         [
             'host' => '127.0.0.1:8889',
             'user' => 'root',
             'pass' => 'root',
-            'name' => 'MAMP IP'
+            'name' => 'MAMP IP (Puerto 8889)'
         ],
+        // Alternativas por si acaso
         [
-            'host' => '127.0.0.1:3306',
+            'host' => 'localhost:8889',
             'user' => 'root',
             'pass' => '',
-            'name' => 'MySQL IP'
-        ],
-        [
-            'host' => '127.0.0.1',
-            'user' => 'root',
-            'pass' => '',
-            'name' => 'Local IP'
+            'name' => 'MAMP 8889 sin contraseña'
         ]
     ];
 
