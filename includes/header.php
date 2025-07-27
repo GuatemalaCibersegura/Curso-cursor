@@ -11,44 +11,177 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     
     <style>
-        .navbar-brand {
-            font-weight: bold;
+        :root {
+            --corinto-color: #8B4B8C;  /* Color corinto */
+            --navy-blue: #1B2951;      /* Azul marino */
+            --corinto-light: #A569A6;  /* Corinto más claro */
+            --navy-light: #2A3B6B;     /* Azul marino más claro */
         }
-        .sidebar {
-            min-height: calc(100vh - 56px);
+
+        body {
             background-color: #f8f9fa;
         }
+
+        .navbar-brand {
+            font-weight: bold;
+            color: white !important;
+        }
+
+        .navbar {
+            background: linear-gradient(135deg, var(--navy-blue) 0%, var(--corinto-color) 100%) !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .sidebar {
+            min-height: calc(100vh - 56px);
+            background: linear-gradient(180deg, var(--corinto-color) 0%, var(--navy-blue) 100%);
+            border-right: 2px solid var(--corinto-light);
+        }
+
+        .sidebar .nav-link {
+            color: white !important;
+            padding: 12px 20px;
+            margin: 5px 10px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .sidebar .nav-link:hover {
+            background-color: rgba(255, 255, 255, 0.15);
+            transform: translateX(5px);
+        }
+
+        .sidebar .nav-link.active {
+            background-color: rgba(255, 255, 255, 0.2);
+            border-left: 4px solid white;
+            font-weight: 600;
+        }
+
         .main-content {
             padding: 20px;
+            background-color: #f8f9fa;
         }
+
         .card {
-            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-            border: 1px solid rgba(0, 0, 0, 0.125);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border: none;
+            border-radius: 12px;
+            transition: transform 0.2s ease;
         }
+
+        .card:hover {
+            transform: translateY(-2px);
+        }
+
         .stats-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, var(--corinto-color) 0%, var(--navy-blue) 100%);
             color: white;
+            border: none;
         }
+
         .stats-card .card-body {
             padding: 1.5rem;
         }
+
+        .stats-card h3 {
+            font-size: 2.2rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
         .btn-primary {
-            background-color: #0d6efd;
-            border-color: #0d6efd;
-        }
-        .table th {
-            background-color: #f8f9fa;
+            background: linear-gradient(135deg, var(--corinto-color) 0%, var(--navy-blue) 100%);
+            border: none;
+            border-radius: 8px;
+            padding: 10px 20px;
             font-weight: 600;
+            transition: all 0.3s ease;
         }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, var(--corinto-light) 0%, var(--navy-light) 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .btn-outline-primary {
+            border-color: var(--corinto-color);
+            color: var(--corinto-color);
+        }
+
+        .btn-outline-primary:hover {
+            background-color: var(--corinto-color);
+            border-color: var(--corinto-color);
+        }
+
+        .table th {
+            background: linear-gradient(135deg, var(--corinto-color) 0%, var(--navy-blue) 100%);
+            color: white;
+            font-weight: 600;
+            border: none;
+        }
+
+        .table td {
+            border-color: #e9ecef;
+            padding: 12px;
+        }
+
         .navbar-nav .nav-link.active {
+            background-color: rgba(255, 255, 255, 0.2);
+            border-radius: 0.375rem;
+        }
+
+        .navbar-nav .nav-link {
+            color: rgba(255, 255, 255, 0.9) !important;
+            transition: all 0.3s ease;
+        }
+
+        .navbar-nav .nav-link:hover {
+            color: white !important;
             background-color: rgba(255, 255, 255, 0.1);
             border-radius: 0.375rem;
+        }
+
+        .form-control:focus {
+            border-color: var(--corinto-color);
+            box-shadow: 0 0 0 0.2rem rgba(139, 75, 140, 0.25);
+        }
+
+        .alert-success {
+            background-color: #d4edda;
+            border-color: var(--corinto-color);
+            color: var(--navy-blue);
+        }
+
+        .alert-danger {
+            background-color: #f8d7da;
+            border-color: #dc3545;
+            color: #721c24;
+        }
+
+        .page-header {
+            background: linear-gradient(135deg, var(--corinto-color) 0%, var(--navy-blue) 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+        }
+
+        .dropdown-menu {
+            border: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            border-radius: 8px;
+        }
+
+        .dropdown-item:hover {
+            background-color: var(--corinto-color);
+            color: white;
         }
     </style>
 </head>
 <body>
     <!-- Navigation Bar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container-fluid">
             <a class="navbar-brand" href="dashboard.php">
                 <i class="bi bi-car-front"></i> Car Wash Control System

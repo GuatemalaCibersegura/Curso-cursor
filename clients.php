@@ -41,7 +41,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $conn) {
                 $contact_number = sanitizeInput($_POST['contact_number'] ?? '');
                 $email = sanitizeInput($_POST['email'] ?? '');
                 $vehicle_type = sanitizeInput($_POST['vehicle_type'] ?? '');
+                $vehicle_brand = sanitizeInput($_POST['vehicle_brand'] ?? '');
+                $vehicle_model = sanitizeInput($_POST['vehicle_model'] ?? '');
+                $vehicle_year = !empty($_POST['vehicle_year']) ? intval($_POST['vehicle_year']) : null;
                 $license_plate = strtoupper(sanitizeInput($_POST['license_plate'] ?? ''));
+                $notes = sanitizeInput($_POST['notes'] ?? '');
                 
                 // Validate required fields
                 if (empty($name) || empty($contact_number) || empty($vehicle_type) || empty($license_plate)) {
@@ -60,9 +64,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $conn) {
                             $error_message = 'A client with this license plate already exists.';
                         } else {
                             // Insert new client
-                            $stmt = $conn->prepare("INSERT INTO clients (name, contact_number, email, vehicle_type, license_plate) VALUES (?, ?, ?, ?, ?)");
+                            $stmt = $conn->prepare("INSERT INTO clients (name, contact_number, email, vehicle_type, vehicle_brand, vehicle_model, vehicle_year, license_plate, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
                             
-                            if ($stmt->execute([$name, $contact_number, $email, $vehicle_type, $license_plate])) {
+                            if ($stmt->execute([$name, $contact_number, $email, $vehicle_type, $vehicle_brand, $vehicle_model, $vehicle_year, $license_plate, $notes])) {
                                 $success_message = 'Client registered successfully!';
                                 logActivity('Client Added', "New client: {$name} ({$license_plate})");
                                 $action = 'list'; // Redirect to list view
@@ -79,9 +83,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $conn) {
                             $error_message = 'Another client with this license plate already exists.';
                         } else {
                             // Update client
-                            $stmt = $conn->prepare("UPDATE clients SET name = ?, contact_number = ?, email = ?, vehicle_type = ?, license_plate = ? WHERE id = ?");
+                            $stmt = $conn->prepare("UPDATE clients SET name = ?, contact_number = ?, email = ?, vehicle_type = ?, vehicle_brand = ?, vehicle_model = ?, vehicle_year = ?, license_plate = ?, notes = ? WHERE id = ?");
                             
-                            if ($stmt->execute([$name, $contact_number, $email, $vehicle_type, $license_plate, $client_id])) {
+                            if ($stmt->execute([$name, $contact_number, $email, $vehicle_type, $vehicle_brand, $vehicle_model, $vehicle_year, $license_plate, $notes, $client_id])) {
                                 $success_message = 'Client updated successfully!';
                                 logActivity('Client Updated', "Updated client: {$name} ({$license_plate})");
                                 $action = 'list'; // Redirect to list view
@@ -284,7 +288,18 @@ if ($conn) {
                                     <?php endif; ?>
                                 </td>
                                 <td>
-                                    <span class="badge bg-info text-dark"><?php echo htmlspecialchars($client['vehicle_type']); ?></span>
+                                    <span class="badge bg-info text-dark"><?php echo ucfirst(htmlspecialchars($client['vehicle_type'])); ?></span>
+                                    <?php if ($client['vehicle_brand'] || $client['vehicle_model'] || $client['vehicle_year']): ?>
+                                        <br><small class="text-muted">
+                                            <?php 
+                                            $vehicle_details = [];
+                                            if ($client['vehicle_brand']) $vehicle_details[] = $client['vehicle_brand'];
+                                            if ($client['vehicle_model']) $vehicle_details[] = $client['vehicle_model'];
+                                            if ($client['vehicle_year']) $vehicle_details[] = $client['vehicle_year'];
+                                            echo htmlspecialchars(implode(' ', $vehicle_details));
+                                            ?>
+                                        </small>
+                                    <?php endif; ?>
                                 </td>
                                 <td>
                                     <span class="badge bg-secondary"><?php echo htmlspecialchars($client['license_plate']); ?></span>
@@ -379,28 +394,59 @@ if ($conn) {
                                 <label for="vehicle_type" class="form-label">Vehicle Type <span class="text-danger">*</span></label>
                                 <select class="form-select" id="vehicle_type" name="vehicle_type" required>
                                     <option value="">Select Vehicle Type</option>
-                                    <option value="Sedan" <?php echo ($client['vehicle_type'] ?? '') === 'Sedan' ? 'selected' : ''; ?>>Sedan</option>
-                                    <option value="SUV" <?php echo ($client['vehicle_type'] ?? '') === 'SUV' ? 'selected' : ''; ?>>SUV</option>
-                                    <option value="Hatchback" <?php echo ($client['vehicle_type'] ?? '') === 'Hatchback' ? 'selected' : ''; ?>>Hatchback</option>
-                                    <option value="Truck" <?php echo ($client['vehicle_type'] ?? '') === 'Truck' ? 'selected' : ''; ?>>Truck</option>
-                                    <option value="Van" <?php echo ($client['vehicle_type'] ?? '') === 'Van' ? 'selected' : ''; ?>>Van</option>
-                                    <option value="Coupe" <?php echo ($client['vehicle_type'] ?? '') === 'Coupe' ? 'selected' : ''; ?>>Coupe</option>
-                                    <option value="Convertible" <?php echo ($client['vehicle_type'] ?? '') === 'Convertible' ? 'selected' : ''; ?>>Convertible</option>
-                                    <option value="Other" <?php echo ($client['vehicle_type'] ?? '') === 'Other' ? 'selected' : ''; ?>>Other</option>
+                                    <option value="sedan" <?php echo ($client['vehicle_type'] ?? '') === 'sedan' ? 'selected' : ''; ?>>Sedan</option>
+                                    <option value="suv" <?php echo ($client['vehicle_type'] ?? '') === 'suv' ? 'selected' : ''; ?>>SUV</option>
+                                    <option value="truck" <?php echo ($client['vehicle_type'] ?? '') === 'truck' ? 'selected' : ''; ?>>Truck</option>
+                                    <option value="motorcycle" <?php echo ($client['vehicle_type'] ?? '') === 'motorcycle' ? 'selected' : ''; ?>>Motorcycle</option>
+                                    <option value="van" <?php echo ($client['vehicle_type'] ?? '') === 'van' ? 'selected' : ''; ?>>Van</option>
+                                    <option value="coupe" <?php echo ($client['vehicle_type'] ?? '') === 'coupe' ? 'selected' : ''; ?>>Coupe</option>
+                                    <option value="convertible" <?php echo ($client['vehicle_type'] ?? '') === 'convertible' ? 'selected' : ''; ?>>Convertible</option>
+                                    <option value="other" <?php echo ($client['vehicle_type'] ?? '') === 'other' ? 'selected' : ''; ?>>Other</option>
                                 </select>
                                 <div class="invalid-feedback">
                                     Please select a vehicle type.
                                 </div>
                             </div>
                         </div>
+
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label for="vehicle_brand" class="form-label">Vehicle Brand</label>
+                                <input type="text" class="form-control" id="vehicle_brand" name="vehicle_brand" 
+                                       value="<?php echo htmlspecialchars($client['vehicle_brand'] ?? ''); ?>" 
+                                       maxlength="50" placeholder="e.g., Toyota, Honda">
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                <label for="vehicle_model" class="form-label">Vehicle Model</label>
+                                <input type="text" class="form-control" id="vehicle_model" name="vehicle_model" 
+                                       value="<?php echo htmlspecialchars($client['vehicle_model'] ?? ''); ?>" 
+                                       maxlength="50" placeholder="e.g., Corolla, CR-V">
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                <label for="vehicle_year" class="form-label">Vehicle Year</label>
+                                <input type="number" class="form-control" id="vehicle_year" name="vehicle_year" 
+                                       value="<?php echo htmlspecialchars($client['vehicle_year'] ?? ''); ?>" 
+                                       min="1900" max="<?php echo date('Y') + 1; ?>" placeholder="<?php echo date('Y'); ?>">
+                            </div>
+                        </div>
                         
-                        <div class="mb-3">
-                            <label for="license_plate" class="form-label">License Plate <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="license_plate" name="license_plate" 
-                                   value="<?php echo htmlspecialchars($client['license_plate'] ?? ''); ?>" 
-                                   required maxlength="20" style="text-transform: uppercase;">
-                            <div class="invalid-feedback">
-                                Please enter the vehicle's license plate number.
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="license_plate" class="form-label">License Plate <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="license_plate" name="license_plate" 
+                                       value="<?php echo htmlspecialchars($client['license_plate'] ?? ''); ?>" 
+                                       required maxlength="20" style="text-transform: uppercase;">
+                                <div class="invalid-feedback">
+                                    Please enter the vehicle's license plate number.
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="notes" class="form-label">Notes</label>
+                                <textarea class="form-control" id="notes" name="notes" rows="3" 
+                                          placeholder="Additional notes about the client or vehicle..."><?php echo htmlspecialchars($client['notes'] ?? ''); ?></textarea>
                             </div>
                         </div>
                         

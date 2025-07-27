@@ -1,0 +1,59 @@
+🍎 INSTRUCCIONES DE INSTALACIÓN PARA MAMP
+===========================================
+
+Sistema Car Wash - Versión actualizada v2
+Configuración específica para MAMP
+
+📋 REQUISITOS PREVIOS
+--------------------
+- MAMP instalado y funcionando
+- PHP 7.4+ (incluido en MAMP)
+- MySQL (incluido en MAMP)
+
+🚀 INSTALACIÓN PASO A PASO
+--------------------------
+
+PASO 1: Configurar MAMP
+-----------------------
+1. Abrir MAMP
+2. Hacer clic en 'Start Servers'
+3. Verificar que Apache y MySQL estén en VERDE
+4. Verificar puertos en Preferences → Ports:
+   - Apache: 8888
+   - MySQL: 8889
+
+PASO 2: Extraer archivos
+-----------------------
+1. Extraer el archivo ZIP en la carpeta htdocs de MAMP:
+   - Mac: /Applications/MAMP/htdocs/carwash-system/
+   - Windows: C:\MAMP\htdocs\carwash-system
+PASO 3: Crear base de datos
+--------------------------
+1. Ir a: http://localhost:8888/phpMyAdmin/
+2. Iniciar sesión:
+   - Usuario: root
+   - Contraseña: root
+3. Hacer clic en 'Nueva' (New)
+4. Nombre de la base de datos: carwash_system
+5. Cotejamiento: utf8mb4_unicode_ci
+6. Hacer clic en 'Crear'
+
+PASO 4: Importar estructura
+--------------------------
+1. Seleccionar la base de datos 'carwash_system'
+2. Ir a la pestaña 'Importar'
+3. Seleccionar el archivo 'database.sql'
+4. Hacer clic en 'Continuar'
+5. Verificar que se crearon las tablas correctamente
+
+PASO 5: Acceder al sistema
+-------------------------
+1. Abrir navegador web
+2. Ir a: http://localhost:8888/carwash-system/
+3. Iniciar sesión con:
+   - Administrador: admin / admin123
+   - Personal: staff1 / staff123
+
+✅ El archivo config/database.php ya está configurado para MAMP
+
+🎯 SISTEMA LISTO PARA USAR! 🚗✨

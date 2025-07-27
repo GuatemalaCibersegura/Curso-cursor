@@ -46,9 +46,10 @@ if ($conn && empty($error_message)) {
                     COUNT(s.id) as service_count,
                     SUM(s.cost) as total_income,
                     AVG(s.cost) as avg_service_cost,
-                    GROUP_CONCAT(DISTINCT s.service_type) as service_types
+                    GROUP_CONCAT(DISTINCT st.name) as service_types
                 FROM services s
-                WHERE s.service_date BETWEEN ? AND ?
+                JOIN service_types st ON s.service_type_id = st.id
+                WHERE s.service_date BETWEEN ? AND ? AND s.status = 'completed'
                 GROUP BY s.service_date
                 ORDER BY s.service_date DESC
             ");
@@ -67,7 +68,7 @@ if ($conn && empty($error_message)) {
                     SUM(s.cost) as total_income,
                     AVG(s.cost) as avg_service_cost
                 FROM services s
-                WHERE s.service_date BETWEEN ? AND ?
+                WHERE s.service_date BETWEEN ? AND ? AND s.status = 'completed'
                 GROUP BY YEAR(s.service_date), WEEK(s.service_date)
                 ORDER BY year DESC, week DESC
             ");
@@ -78,15 +79,17 @@ if ($conn && empty($error_message)) {
             // Service types report
             $stmt = $conn->prepare("
                 SELECT 
-                    s.service_type,
+                    st.name as service_type,
+                    st.base_price,
                     COUNT(s.id) as service_count,
                     SUM(s.cost) as total_income,
                     AVG(s.cost) as avg_cost,
                     MIN(s.cost) as min_cost,
                     MAX(s.cost) as max_cost
                 FROM services s
-                WHERE s.service_date BETWEEN ? AND ?
-                GROUP BY s.service_type
+                JOIN service_types st ON s.service_type_id = st.id
+                WHERE s.service_date BETWEEN ? AND ? AND s.status = 'completed'
+                GROUP BY st.id, st.name, st.base_price
                 ORDER BY total_income DESC
             ");
             $stmt->execute([$date_from, $date_to]);
@@ -99,12 +102,14 @@ if ($conn && empty($error_message)) {
                     c.name,
                     c.license_plate,
                     c.vehicle_type,
+                    c.vehicle_brand,
+                    c.vehicle_model,
                     COUNT(s.id) as service_count,
                     SUM(s.cost) as total_spent,
                     AVG(s.cost) as avg_service_cost,
                     MAX(s.service_date) as last_service
                 FROM clients c
-                LEFT JOIN services s ON c.id = s.client_id AND s.service_date BETWEEN ? AND ?
+                LEFT JOIN services s ON c.id = s.client_id AND s.service_date BETWEEN ? AND ? AND s.status = 'completed'
                 GROUP BY c.id
                 HAVING service_count > 0
                 ORDER BY total_spent DESC, service_count DESC
@@ -122,7 +127,7 @@ if ($conn && empty($error_message)) {
                 COUNT(DISTINCT s.client_id) as unique_clients,
                 COUNT(DISTINCT s.service_date) as active_days
             FROM services s
-            WHERE s.service_date BETWEEN ? AND ?
+            WHERE s.service_date BETWEEN ? AND ? AND s.status = 'completed'
         ");
         $stmt->execute([$date_from, $date_to]);
         $summary_stats = $stmt->fetch();
@@ -130,12 +135,13 @@ if ($conn && empty($error_message)) {
         // Get service type breakdown for summary
         $stmt = $conn->prepare("
             SELECT 
-                s.service_type,
+                st.name as service_type,
                 COUNT(s.id) as count,
                 SUM(s.cost) as income
             FROM services s
-            WHERE s.service_date BETWEEN ? AND ?
-            GROUP BY s.service_type
+            JOIN service_types st ON s.service_type_id = st.id
+            WHERE s.service_date BETWEEN ? AND ? AND s.status = 'completed'
+            GROUP BY st.id, st.name
             ORDER BY count DESC
         ");
         $stmt->execute([$date_from, $date_to]);

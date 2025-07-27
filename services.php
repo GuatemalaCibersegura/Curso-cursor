@@ -21,13 +21,17 @@ $services = [];
 $service = null;
 $clients = [];
 
-// Service type pricing
-$service_pricing = [
-    'basic' => 15.00,
-    'deluxe' => 25.00,
-    'premium' => 35.00,
-    'full_detail' => 50.00
-];
+// Get service types from database
+$service_types = [];
+if ($conn) {
+    try {
+        $stmt = $conn->prepare("SELECT * FROM service_types WHERE status = 'active' ORDER BY name");
+        $stmt->execute();
+        $service_types = $stmt->fetchAll();
+    } catch (Exception $e) {
+        error_log("Service types fetch error: " . $e->getMessage());
+    }
+}
 
 // Database connection
 $database = new Database();
@@ -48,46 +52,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $conn) {
             if ($action === 'add' || $action === 'edit') {
                 // Sanitize input data
                 $selected_client_id = sanitizeInput($_POST['client_id'] ?? '');
-                $service_type = sanitizeInput($_POST['service_type'] ?? '');
+                $service_type_id = intval($_POST['service_type_id'] ?? 0);
                 $cost = floatval($_POST['cost'] ?? 0);
                 $service_date = sanitizeInput($_POST['service_date'] ?? '');
                 $service_time = sanitizeInput($_POST['service_time'] ?? '');
+                $duration_minutes = intval($_POST['duration_minutes'] ?? 30);
+                $employee_id = !empty($_POST['employee_id']) ? intval($_POST['employee_id']) : $_SESSION['user_id'];
+                $status = sanitizeInput($_POST['status'] ?? 'completed');
                 $notes = sanitizeInput($_POST['notes'] ?? '');
                 
                 // Validate required fields
-                if (empty($selected_client_id) || empty($service_type) || empty($service_date) || empty($service_time) || $cost <= 0) {
+                if (empty($selected_client_id) || empty($service_type_id) || empty($service_date) || empty($service_time) || $cost <= 0) {
                     $error_message = 'Please fill in all required fields.';
-                } elseif (!in_array($service_type, array_keys($service_pricing))) {
-                    $error_message = 'Invalid service type selected.';
                 } elseif (strtotime($service_date) > time()) {
                     $error_message = 'Service date cannot be in the future.';
                 } else {
-                    // Verify client exists
+                    // Verify client and service type exist
                     $stmt = $conn->prepare("SELECT name FROM clients WHERE id = ?");
                     $stmt->execute([$selected_client_id]);
                     $client_info = $stmt->fetch();
                     
+                    $stmt = $conn->prepare("SELECT name FROM service_types WHERE id = ?");
+                    $stmt->execute([$service_type_id]);
+                    $service_type_info = $stmt->fetch();
+                    
                     if (!$client_info) {
                         $error_message = 'Selected client not found.';
+                    } elseif (!$service_type_info) {
+                        $error_message = 'Selected service type not found.';
                     } else {
                         if ($action === 'add') {
                             // Insert new service
-                            $stmt = $conn->prepare("INSERT INTO services (client_id, service_type, cost, service_date, service_time, notes) VALUES (?, ?, ?, ?, ?, ?)");
+                            $stmt = $conn->prepare("INSERT INTO services (client_id, service_type_id, cost, service_date, service_time, duration_minutes, employee_id, status, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
                             
-                            if ($stmt->execute([$selected_client_id, $service_type, $cost, $service_date, $service_time, $notes])) {
+                            if ($stmt->execute([$selected_client_id, $service_type_id, $cost, $service_date, $service_time, $duration_minutes, $employee_id, $status, $notes])) {
                                 $success_message = 'Service added successfully!';
-                                logActivity('Service Added', "New service: {$service_type} for {$client_info['name']} - " . formatCurrency($cost));
+                                logActivity('Service Added', "New service: {$service_type_info['name']} for {$client_info['name']} - " . formatCurrency($cost));
                                 $action = 'list'; // Redirect to list view
                             } else {
                                 $error_message = 'Failed to add service. Please try again.';
                             }
                         } elseif ($action === 'edit' && $service_id) {
                             // Update service
-                            $stmt = $conn->prepare("UPDATE services SET client_id = ?, service_type = ?, cost = ?, service_date = ?, service_time = ?, notes = ? WHERE id = ?");
+                            $stmt = $conn->prepare("UPDATE services SET client_id = ?, service_type_id = ?, cost = ?, service_date = ?, service_time = ?, duration_minutes = ?, employee_id = ?, status = ?, notes = ? WHERE id = ?");
                             
-                            if ($stmt->execute([$selected_client_id, $service_type, $cost, $service_date, $service_time, $notes, $service_id])) {
+                            if ($stmt->execute([$selected_client_id, $service_type_id, $cost, $service_date, $service_time, $duration_minutes, $employee_id, $status, $notes, $service_id])) {
                                 $success_message = 'Service updated successfully!';
-                                logActivity('Service Updated', "Updated service: {$service_type} for {$client_info['name']} - " . formatCurrency($cost));
+                                logActivity('Service Updated', "Updated service: {$service_type_info['name']} for {$client_info['name']} - " . formatCurrency($cost));
                                 $action = 'list'; // Redirect to list view
                             } else {
                                 $error_message = 'Failed to update service. Please try again.';
@@ -108,9 +119,10 @@ if ($action === 'delete' && $service_id && $conn) {
     try {
         // Get service info for logging
         $stmt = $conn->prepare("
-            SELECT s.*, c.name as client_name 
+            SELECT s.*, c.name as client_name, st.name as service_type_name
             FROM services s 
             JOIN clients c ON s.client_id = c.id 
+            JOIN service_types st ON s.service_type_id = st.id
             WHERE s.id = ?
         ");
         $stmt->execute([$service_id]);
@@ -121,7 +133,7 @@ if ($action === 'delete' && $service_id && $conn) {
             $stmt = $conn->prepare("DELETE FROM services WHERE id = ?");
             if ($stmt->execute([$service_id])) {
                 $success_message = 'Service deleted successfully!';
-                logActivity('Service Deleted', "Deleted service: {$service_info['service_type']} for {$service_info['client_name']}");
+                logActivity('Service Deleted', "Deleted service: {$service_info['service_type_name']} for {$service_info['client_name']}");
             } else {
                 $error_message = 'Failed to delete service. Please try again.';
             }
@@ -156,14 +168,16 @@ if ($conn) {
                 $where_clause = 'WHERE s.client_id = ?';
                 $params[] = $client_id;
             } elseif (!empty($search)) {
-                $where_clause = 'WHERE c.name LIKE ? OR c.license_plate LIKE ? OR s.service_type LIKE ?';
+                $where_clause = 'WHERE c.name LIKE ? OR c.license_plate LIKE ? OR st.name LIKE ?';
                 $params = [$search_param, $search_param, $search_param];
             }
             
             $stmt = $conn->prepare("
-                SELECT s.*, c.name as client_name, c.license_plate 
+                SELECT s.*, c.name as client_name, c.license_plate, st.name as service_type_name, u.full_name as employee_name
                 FROM services s 
                 JOIN clients c ON s.client_id = c.id 
+                JOIN service_types st ON s.service_type_id = st.id
+                LEFT JOIN users u ON s.employee_id = u.id
                 {$where_clause}
                 ORDER BY s.service_date DESC, s.service_time DESC
             ");
@@ -173,9 +187,10 @@ if ($conn) {
         } elseif ($action === 'edit' && $service_id) {
             // Get specific service for editing
             $stmt = $conn->prepare("
-                SELECT s.*, c.name as client_name 
+                SELECT s.*, c.name as client_name, st.name as service_type_name
                 FROM services s 
                 JOIN clients c ON s.client_id = c.id 
+                JOIN service_types st ON s.service_type_id = st.id
                 WHERE s.id = ?
             ");
             $stmt->execute([$service_id]);
@@ -186,6 +201,11 @@ if ($conn) {
                 $action = 'list';
             }
         }
+        
+        // Get employees for dropdown
+        $stmt = $conn->prepare("SELECT id, full_name FROM users WHERE status = 'active' ORDER BY full_name");
+        $stmt->execute();
+        $employees = $stmt->fetchAll();
     } catch (Exception $e) {
         error_log("Service fetch error: " . $e->getMessage());
         $error_message = 'An error occurred while loading service data.';
@@ -301,6 +321,8 @@ if ($conn) {
                                 <th>Cost</th>
                                 <th>Date</th>
                                 <th>Time</th>
+                                <th>Employee</th>
+                                <th>Status</th>
                                 <th>Notes</th>
                                 <th>Actions</th>
                             </tr>
@@ -315,7 +337,7 @@ if ($conn) {
                                     <span class="badge bg-secondary"><?php echo htmlspecialchars($service['license_plate']); ?></span>
                                 </td>
                                 <td>
-                                    <span class="badge bg-info text-dark"><?php echo ucfirst(str_replace('_', ' ', $service['service_type'])); ?></span>
+                                    <span class="badge bg-info text-dark"><?php echo htmlspecialchars($service['service_type_name']); ?></span>
                                 </td>
                                 <td>
                                     <strong class="text-success"><?php echo formatCurrency($service['cost']); ?></strong>
@@ -323,9 +345,28 @@ if ($conn) {
                                 <td><?php echo formatDate($service['service_date']); ?></td>
                                 <td><?php echo date('g:i A', strtotime($service['service_time'])); ?></td>
                                 <td>
+                                    <?php if ($service['employee_name']): ?>
+                                        <small><?php echo htmlspecialchars($service['employee_name']); ?></small>
+                                    <?php else: ?>
+                                        <span class="text-muted">-</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td>
+                                    <?php
+                                    $status_colors = [
+                                        'completed' => 'success',
+                                        'pending' => 'warning',
+                                        'in_progress' => 'primary',
+                                        'cancelled' => 'danger'
+                                    ];
+                                    $status_color = $status_colors[$service['status']] ?? 'secondary';
+                                    ?>
+                                    <span class="badge bg-<?php echo $status_color; ?>"><?php echo ucfirst(str_replace('_', ' ', $service['status'])); ?></span>
+                                </td>
+                                <td>
                                     <?php if ($service['notes']): ?>
                                         <span title="<?php echo htmlspecialchars($service['notes']); ?>">
-                                            <?php echo htmlspecialchars(substr($service['notes'], 0, 30) . (strlen($service['notes']) > 30 ? '...' : '')); ?>
+                                            <?php echo htmlspecialchars(substr($service['notes'], 0, 20) . (strlen($service['notes']) > 20 ? '...' : '')); ?>
                                         </span>
                                     <?php else: ?>
                                         <span class="text-muted">-</span>
@@ -416,13 +457,15 @@ if ($conn) {
                             </div>
                             
                             <div class="col-md-6 mb-3">
-                                <label for="service_type" class="form-label">Service Type <span class="text-danger">*</span></label>
-                                <select class="form-select" id="service_type" name="service_type" required>
+                                <label for="service_type_id" class="form-label">Service Type <span class="text-danger">*</span></label>
+                                <select class="form-select" id="service_type_id" name="service_type_id" required>
                                     <option value="">Select Service Type</option>
-                                    <?php foreach ($service_pricing as $type => $price): ?>
-                                    <option value="<?php echo $type; ?>" data-price="<?php echo $price; ?>"
-                                            <?php echo ($service['service_type'] ?? '') === $type ? 'selected' : ''; ?>>
-                                        <?php echo ucfirst(str_replace('_', ' ', $type)); ?> (<?php echo formatCurrency($price); ?>)
+                                    <?php foreach ($service_types as $type): ?>
+                                    <option value="<?php echo $type['id']; ?>" 
+                                            data-price="<?php echo $type['base_price']; ?>"
+                                            data-duration="<?php echo $type['duration_minutes']; ?>"
+                                            <?php echo ($service['service_type_id'] ?? '') == $type['id'] ? 'selected' : ''; ?>>
+                                        <?php echo htmlspecialchars($type['name']); ?> (<?php echo formatCurrency($type['base_price']); ?>)
                                     </option>
                                     <?php endforeach; ?>
                                 </select>
@@ -466,6 +509,39 @@ if ($conn) {
                                 </div>
                             </div>
                         </div>
+
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label for="duration_minutes" class="form-label">Duration (minutes)</label>
+                                <input type="number" class="form-control" id="duration_minutes" name="duration_minutes" 
+                                       value="<?php echo $service['duration_minutes'] ?? '30'; ?>" 
+                                       min="5" max="300" step="5">
+                                <div class="form-text">Estimated service duration</div>
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                <label for="employee_id" class="form-label">Employee</label>
+                                <select class="form-select" id="employee_id" name="employee_id">
+                                    <option value="">Select Employee</option>
+                                    <?php foreach ($employees as $employee): ?>
+                                    <option value="<?php echo $employee['id']; ?>" 
+                                            <?php echo ($service['employee_id'] ?? $_SESSION['user_id']) == $employee['id'] ? 'selected' : ''; ?>>
+                                        <?php echo htmlspecialchars($employee['full_name']); ?>
+                                    </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                <label for="status" class="form-label">Status</label>
+                                <select class="form-select" id="status" name="status">
+                                    <option value="completed" <?php echo ($service['status'] ?? 'completed') === 'completed' ? 'selected' : ''; ?>>Completed</option>
+                                    <option value="pending" <?php echo ($service['status'] ?? '') === 'pending' ? 'selected' : ''; ?>>Pending</option>
+                                    <option value="in_progress" <?php echo ($service['status'] ?? '') === 'in_progress' ? 'selected' : ''; ?>>In Progress</option>
+                                    <option value="cancelled" <?php echo ($service['status'] ?? '') === 'cancelled' ? 'selected' : ''; ?>>Cancelled</option>
+                                </select>
+                            </div>
+                        </div>
                         
                         <div class="mb-3">
                             <label for="notes" class="form-label">Notes</label>
@@ -498,12 +574,16 @@ if ($conn) {
         }
     });
     
-    // Auto-update cost when service type changes
-    document.getElementById('service_type').addEventListener('change', function() {
+    // Auto-update cost and duration when service type changes
+    document.getElementById('service_type_id').addEventListener('change', function() {
         const selectedOption = this.options[this.selectedIndex];
         const price = selectedOption.getAttribute('data-price');
+        const duration = selectedOption.getAttribute('data-duration');
         if (price) {
             document.getElementById('cost').value = parseFloat(price).toFixed(2);
+        }
+        if (duration) {
+            document.getElementById('duration_minutes').value = duration;
         }
     });
     
