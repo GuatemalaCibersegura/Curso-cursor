@@ -1,13 +1,13 @@
 <?php
 /**
- * Login Module
- * Car Wash Client Platform Control System
+ * Módulo de Inicio de Sesión
+ * Sistema de Control de Plataforma de Clientes - Car Wash Emanuel
  */
 
 require_once 'includes/functions.php';
 require_once 'config/database.php';
 
-// Redirect if already logged in
+// Redirigir si ya está logueado
 if (isLoggedIn()) {
     header("Location: dashboard.php");
     exit();
@@ -16,145 +16,194 @@ if (isLoggedIn()) {
 $error_message = '';
 $success_message = '';
 
-// Handle login form submission
+// Manejar envío del formulario de login
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = sanitizeInput($_POST['username'] ?? '');
     $password = $_POST['password'] ?? '';
     $csrf_token = $_POST['csrf_token'] ?? '';
     
-    // Validate CSRF token
+    // Validar token CSRF
     if (!verifyCSRFToken($csrf_token)) {
-        $error_message = 'Invalid security token. Please try again.';
+        $error_message = 'Token de seguridad inválido. Por favor intente de nuevo.';
     } elseif (empty($username) || empty($password)) {
-        $error_message = 'Please enter both username and password.';
+        $error_message = 'Por favor ingrese tanto el usuario como la contraseña.';
     } else {
         try {
             $database = new Database();
             $conn = $database->getConnection();
             
             if ($conn) {
-                // Prepare statement to prevent SQL injection
-                $stmt = $conn->prepare("SELECT id, username, password, role, full_name, email FROM users WHERE username = ? AND password IS NOT NULL");
+                // Preparar consulta para prevenir inyección SQL
+                $stmt = $conn->prepare("
+                    SELECT u.id, u.nombre_usuario, u.contrasena, r.nombre as rol_nombre 
+                    FROM usuarios u 
+                    JOIN roles r ON u.rol_id = r.id 
+                    WHERE u.nombre_usuario = ? AND u.contrasena IS NOT NULL
+                ");
                 $stmt->execute([$username]);
                 $user = $stmt->fetch();
                 
-                // Verify password using bcrypt
-                if ($user && password_verify($password, $user['password'])) {
-                    // Login successful - create session
+                // Verificar contraseña usando bcrypt
+                if ($user && password_verify($password, $user['contrasena'])) {
+                    // Login exitoso - crear sesión
                     $_SESSION['user_id'] = $user['id'];
-                    $_SESSION['username'] = $user['username'];
-                    $_SESSION['user_role'] = $user['role'];
-                    $_SESSION['full_name'] = $user['full_name'];
-                    $_SESSION['email'] = $user['email'];
+                    $_SESSION['username'] = $user['nombre_usuario'];
+                    $_SESSION['user_role'] = $user['rol_nombre'];
                     
-                    // Log the login activity
-                    logActivity('User Login', "User {$username} logged in successfully");
+                    // Registrar la actividad de login
+                    logActivity('Login exitoso', 'Usuario ' . $username . ' inició sesión');
                     
-                    // Redirect to dashboard
+                    // Redirigir al dashboard
                     header("Location: dashboard.php");
                     exit();
                 } else {
-                    $error_message = 'Invalid username or password.';
-                    logActivity('Failed Login Attempt', "Failed login for username: {$username}");
+                    $error_message = 'Usuario o contraseña incorrectos.';
+                    logActivity('Intento de login fallido', 'Usuario: ' . $username);
                 }
             } else {
-                $error_message = 'Database connection failed. Please try again later.';
+                $error_message = 'Error de conexión a la base de datos.';
             }
         } catch (Exception $e) {
-            error_log("Login error: " . $e->getMessage());
-            $error_message = 'An error occurred during login. Please try again.';
+            $error_message = 'Error interno del servidor.';
+            error_log('Error en login: ' . $e->getMessage());
         }
     }
 }
 
-// Handle logout message
-if (isset($_GET['logout']) && $_GET['logout'] === 'success') {
-    $success_message = 'You have been successfully logged out.';
-}
-
-$page_title = 'Login';
+// Generar nuevo token CSRF
+$csrf_token = generateCSRFToken();
 ?>
 
-<?php include 'includes/header.php'; ?>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar Sesión - Car Wash Emanuel</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+        }
+        .login-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .login-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+        .login-form {
+            padding: 2rem;
+        }
+        .form-control {
+            border-radius: 10px;
+            border: 2px solid #e9ecef;
+            padding: 12px 15px;
+        }
+        .form-control:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+        .btn-login {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 10px;
+            padding: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        .logo {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-6 col-lg-5">
+                <div class="login-container">
+                    <!-- Header -->
+                    <div class="login-header">
+                        <div class="logo">
+                            <i class="bi bi-car-front-fill"></i>
+                        </div>
+                        <h2 class="mb-0">Car Wash Emanuel</h2>
+                        <p class="mb-0">Sistema de Control de Clientes</p>
+                    </div>
 
-<div class="row justify-content-center">
-    <div class="col-md-6 col-lg-4">
-        <div class="card shadow-lg">
-            <div class="card-body p-5">
-                <div class="text-center mb-4">
-                    <i class="bi bi-car-front display-4 text-primary"></i>
-                    <h2 class="mt-3">Car Wash Control System</h2>
-                    <p class="text-muted">Please sign in to your account</p>
-                </div>
-                
-                <?php if ($error_message): ?>
-                    <?php showError($error_message); ?>
-                <?php endif; ?>
-                
-                <?php if ($success_message): ?>
-                    <?php showSuccess($success_message); ?>
-                <?php endif; ?>
-                
-                <form method="POST" action="login.php" id="loginForm" novalidate>
-                    <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
-                    
-                    <div class="mb-3">
-                        <label for="username" class="form-label">Username</label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="bi bi-person"></i></span>
-                            <input type="text" class="form-control" id="username" name="username" 
-                                   value="<?php echo htmlspecialchars($username ?? ''); ?>" 
-                                   required maxlength="50" autocomplete="username">
-                            <div class="invalid-feedback">
-                                Please enter your username.
+                    <!-- Formulario de Login -->
+                    <div class="login-form">
+                        <?php if (!empty($error_message)): ?>
+                            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                <?php echo htmlspecialchars($error_message); ?>
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                             </div>
+                        <?php endif; ?>
+
+                        <?php if (!empty($success_message)): ?>
+                            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <?php echo htmlspecialchars($success_message); ?>
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        <?php endif; ?>
+
+                        <form method="POST" action="">
+                            <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
+                            
+                            <div class="mb-3">
+                                <label for="username" class="form-label">
+                                    <i class="bi bi-person-fill me-2"></i>Usuario
+                                </label>
+                                <input type="text" class="form-control" id="username" name="username" 
+                                       value="<?php echo htmlspecialchars($username ?? ''); ?>" 
+                                       placeholder="Ingrese su usuario" required>
+                            </div>
+
+                            <div class="mb-4">
+                                <label for="password" class="form-label">
+                                    <i class="bi bi-lock-fill me-2"></i>Contraseña
+                                </label>
+                                <input type="password" class="form-control" id="password" name="password" 
+                                       placeholder="Ingrese su contraseña" required>
+                            </div>
+
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary btn-login">
+                                    <i class="bi bi-box-arrow-in-right me-2"></i>
+                                    Iniciar Sesión
+                                </button>
+                            </div>
+                        </form>
+
+                        <div class="text-center mt-4">
+                            <small class="text-muted">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Usuario demo: <strong>admin</strong> / Contraseña: <strong>admin123</strong>
+                            </small>
                         </div>
                     </div>
-                    
-                    <div class="mb-3">
-                        <label for="password" class="form-label">Password</label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="bi bi-lock"></i></span>
-                            <input type="password" class="form-control" id="password" name="password" 
-                                   required autocomplete="current-password">
-                            <div class="invalid-feedback">
-                                Please enter your password.
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="d-grid">
-                        <button type="submit" class="btn btn-primary btn-lg">
-                            <i class="bi bi-box-arrow-in-right"></i> Sign In
-                        </button>
-                    </div>
-                </form>
-                
-                <div class="text-center mt-4">
-                    <small class="text-muted">
-                        <strong>Demo Credentials:</strong><br>
-                        Admin: admin / admin123<br>
-                        Staff: staff1 / admin123
-                    </small>
                 </div>
             </div>
         </div>
     </div>
-</div>
 
-<script>
-// Form validation
-document.getElementById('loginForm').addEventListener('submit', function(event) {
-    if (!validateForm('loginForm')) {
-        event.preventDefault();
-        event.stopPropagation();
-    }
-});
-
-// Focus on username field when page loads
-document.addEventListener('DOMContentLoaded', function() {
-    document.getElementById('username').focus();
-});
-</script>
-
-<?php include 'includes/footer.php'; ?>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

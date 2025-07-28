@@ -1,228 +1,262 @@
 <?php
 /**
- * Service Entry Module
- * Car Wash Client Platform Control System
+ * Módulo de Gestión de Servicios/Citas
+ * Sistema de Control de Plataforma de Clientes - Car Wash Emanuel
  */
 
 require_once 'includes/functions.php';
 require_once 'config/database.php';
 
-// Require authentication
+// Requerir autenticación
 requireLogin();
 
-$page_title = 'Service Management';
+$page_title = 'Gestión de Servicios';
+$page_icon = 'bi bi-calendar-check-fill';
+$breadcrumbs = [
+    ['title' => 'Servicios']
+];
+
+// Inicializar variables
+$error_message = '';
+$success_message = '';
 $action = $_GET['action'] ?? 'list';
 $service_id = $_GET['id'] ?? null;
 $client_id = $_GET['client_id'] ?? null;
+$vehicle_id = $_GET['vehicle_id'] ?? null;
 
-$error_message = '';
-$success_message = '';
-$services = [];
-$service = null;
-$clients = [];
-
-// Service type pricing
-$service_pricing = [
-    'basic' => 15.00,
-    'deluxe' => 25.00,
-    'premium' => 35.00,
-    'full_detail' => 50.00
-];
-
-// Database connection
-$database = new Database();
-$conn = $database->getConnection();
-
-if (!$conn) {
-    $error_message = 'Database connection failed.';
-}
-
-// Handle form submissions
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && $conn) {
-    $csrf_token = $_POST['csrf_token'] ?? '';
+try {
+    $database = new Database();
+    $conn = $database->getConnection();
     
-    if (!verifyCSRFToken($csrf_token)) {
-        $error_message = 'Invalid security token. Please try again.';
-    } else {
-        try {
-            if ($action === 'add' || $action === 'edit') {
-                // Sanitize input data
-                $selected_client_id = sanitizeInput($_POST['client_id'] ?? '');
-                $service_type = sanitizeInput($_POST['service_type'] ?? '');
-                $cost = floatval($_POST['cost'] ?? 0);
-                $service_date = sanitizeInput($_POST['service_date'] ?? '');
-                $service_time = sanitizeInput($_POST['service_time'] ?? '');
-                $notes = sanitizeInput($_POST['notes'] ?? '');
+    if (!$conn) {
+        throw new Exception('Error de conexión a la base de datos');
+    }
+    
+    // Procesar acciones POST
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $csrf_token = $_POST['csrf_token'] ?? '';
+        
+        if (!verifyCSRFToken($csrf_token)) {
+            throw new Exception('Token de seguridad inválido');
+        }
+        
+        switch ($action) {
+            case 'add':
+                // Agregar nueva cita
+                $cliente_id = intval($_POST['cliente_id']);
+                $vehiculo_id = intval($_POST['vehiculo_id']);
+                $tipo_servicio_id = intval($_POST['tipo_servicio_id']);
+                $fecha_cita = $_POST['fecha_cita'];
+                $hora_cita = $_POST['hora_cita'];
                 
-                // Validate required fields
-                if (empty($selected_client_id) || empty($service_type) || empty($service_date) || empty($service_time) || $cost <= 0) {
-                    $error_message = 'Please fill in all required fields.';
-                } elseif (!in_array($service_type, array_keys($service_pricing))) {
-                    $error_message = 'Invalid service type selected.';
-                } elseif (strtotime($service_date) > time()) {
-                    $error_message = 'Service date cannot be in the future.';
-                } else {
-                    // Verify client exists
-                    $stmt = $conn->prepare("SELECT name FROM clients WHERE id = ?");
-                    $stmt->execute([$selected_client_id]);
-                    $client_info = $stmt->fetch();
-                    
-                    if (!$client_info) {
-                        $error_message = 'Selected client not found.';
-                    } else {
-                        if ($action === 'add') {
-                            // Insert new service
-                            $stmt = $conn->prepare("INSERT INTO services (client_id, service_type, cost, service_date, service_time, notes) VALUES (?, ?, ?, ?, ?, ?)");
-                            
-                            if ($stmt->execute([$selected_client_id, $service_type, $cost, $service_date, $service_time, $notes])) {
-                                $success_message = 'Service added successfully!';
-                                logActivity('Service Added', "New service: {$service_type} for {$client_info['name']} - " . formatCurrency($cost));
-                                $action = 'list'; // Redirect to list view
-                            } else {
-                                $error_message = 'Failed to add service. Please try again.';
-                            }
-                        } elseif ($action === 'edit' && $service_id) {
-                            // Update service
-                            $stmt = $conn->prepare("UPDATE services SET client_id = ?, service_type = ?, cost = ?, service_date = ?, service_time = ?, notes = ? WHERE id = ?");
-                            
-                            if ($stmt->execute([$selected_client_id, $service_type, $cost, $service_date, $service_time, $notes, $service_id])) {
-                                $success_message = 'Service updated successfully!';
-                                logActivity('Service Updated', "Updated service: {$service_type} for {$client_info['name']} - " . formatCurrency($cost));
-                                $action = 'list'; // Redirect to list view
-                            } else {
-                                $error_message = 'Failed to update service. Please try again.';
-                            }
-                        }
-                    }
+                // Validaciones
+                if (empty($cliente_id) || empty($vehiculo_id) || empty($tipo_servicio_id) || empty($fecha_cita) || empty($hora_cita)) {
+                    throw new Exception('Todos los campos son obligatorios');
                 }
-            }
-        } catch (Exception $e) {
-            error_log("Service management error: " . $e->getMessage());
-            $error_message = 'An error occurred. Please try again.';
+                
+                // Combinar fecha y hora
+                $fecha_hora_cita = $fecha_cita . ' ' . $hora_cita;
+                
+                // Verificar que la fecha no sea en el pasado
+                if (strtotime($fecha_hora_cita) < time()) {
+                    throw new Exception('No se puede programar una cita en el pasado');
+                }
+                
+                // Verificar que el vehículo pertenezca al cliente
+                $stmt = $conn->prepare("SELECT id FROM vehiculos WHERE id = ? AND cliente_id = ?");
+                $stmt->execute([$vehiculo_id, $cliente_id]);
+                if (!$stmt->fetch()) {
+                    throw new Exception('El vehículo seleccionado no pertenece al cliente');
+                }
+                
+                // Insertar cita
+                $stmt = $conn->prepare("
+                    INSERT INTO citas (cliente_id, vehiculo_id, tipo_servicio_id, fecha_cita, estado) 
+                    VALUES (?, ?, ?, ?, 'programada')
+                ");
+                
+                if ($stmt->execute([$cliente_id, $vehiculo_id, $tipo_servicio_id, $fecha_hora_cita])) {
+                    $new_service_id = $conn->lastInsertId();
+                    logActivity('Cita programada', "Cita ID: $new_service_id para cliente ID: $cliente_id");
+                    $success_message = 'Cita programada exitosamente';
+                    $action = 'list';
+                } else {
+                    throw new Exception('Error al programar la cita');
+                }
+                break;
+                
+            case 'edit':
+                // Editar cita existente
+                $cliente_id = intval($_POST['cliente_id']);
+                $vehiculo_id = intval($_POST['vehiculo_id']);
+                $tipo_servicio_id = intval($_POST['tipo_servicio_id']);
+                $fecha_cita = $_POST['fecha_cita'];
+                $hora_cita = $_POST['hora_cita'];
+                $estado = $_POST['estado'];
+                
+                // Validaciones
+                if (empty($cliente_id) || empty($vehiculo_id) || empty($tipo_servicio_id) || empty($fecha_cita) || empty($hora_cita)) {
+                    throw new Exception('Todos los campos son obligatorios');
+                }
+                
+                // Combinar fecha y hora
+                $fecha_hora_cita = $fecha_cita . ' ' . $hora_cita;
+                
+                // Actualizar cita
+                $stmt = $conn->prepare("
+                    UPDATE citas 
+                    SET cliente_id = ?, vehiculo_id = ?, tipo_servicio_id = ?, fecha_cita = ?, estado = ?
+                    WHERE id = ?
+                ");
+                
+                if ($stmt->execute([$cliente_id, $vehiculo_id, $tipo_servicio_id, $fecha_hora_cita, $estado, $service_id])) {
+                    logActivity('Cita actualizada', "Cita ID: $service_id");
+                    $success_message = 'Cita actualizada exitosamente';
+                    $action = 'list';
+                } else {
+                    throw new Exception('Error al actualizar la cita');
+                }
+                break;
+                
+            case 'complete':
+                // Completar servicio
+                if (!$service_id) {
+                    throw new Exception('ID de servicio requerido');
+                }
+                
+                $stmt = $conn->prepare("UPDATE citas SET estado = 'completada' WHERE id = ?");
+                if ($stmt->execute([$service_id])) {
+                    logActivity('Servicio completado', "Cita ID: $service_id");
+                    $success_message = 'Servicio marcado como completado';
+                } else {
+                    throw new Exception('Error al completar el servicio');
+                }
+                $action = 'list';
+                break;
+                
+            case 'cancel':
+                // Cancelar servicio
+                if (!$service_id) {
+                    throw new Exception('ID de servicio requerido');
+                }
+                
+                $stmt = $conn->prepare("UPDATE citas SET estado = 'cancelada' WHERE id = ?");
+                if ($stmt->execute([$service_id])) {
+                    logActivity('Servicio cancelado', "Cita ID: $service_id");
+                    $success_message = 'Servicio cancelado';
+                } else {
+                    throw new Exception('Error al cancelar el servicio');
+                }
+                $action = 'list';
+                break;
         }
     }
-}
-
-// Handle delete action
-if ($action === 'delete' && $service_id && $conn) {
-    try {
-        // Get service info for logging
-        $stmt = $conn->prepare("
-            SELECT s.*, c.name as client_name 
-            FROM services s 
-            JOIN clients c ON s.client_id = c.id 
-            WHERE s.id = ?
-        ");
-        $stmt->execute([$service_id]);
-        $service_info = $stmt->fetch();
-        
-        if ($service_info) {
-            // Delete service
-            $stmt = $conn->prepare("DELETE FROM services WHERE id = ?");
-            if ($stmt->execute([$service_id])) {
-                $success_message = 'Service deleted successfully!';
-                logActivity('Service Deleted', "Deleted service: {$service_info['service_type']} for {$service_info['client_name']}");
-            } else {
-                $error_message = 'Failed to delete service. Please try again.';
-            }
+    
+    // Procesar eliminaciones (GET)
+    if ($action === 'delete' && $service_id) {
+        $stmt = $conn->prepare("DELETE FROM citas WHERE id = ?");
+        if ($stmt->execute([$service_id])) {
+            logActivity('Cita eliminada', "Cita ID: $service_id");
+            $success_message = 'Cita eliminada exitosamente';
         } else {
-            $error_message = 'Service not found.';
+            $error_message = 'Error al eliminar la cita';
         }
-    } catch (Exception $e) {
-        error_log("Service delete error: " . $e->getMessage());
-        $error_message = 'An error occurred while deleting service.';
+        $action = 'list';
     }
-    $action = 'list'; // Redirect to list view
-}
-
-// Fetch data based on action
-if ($conn) {
-    try {
-        // Always load clients for the dropdown
-        $stmt = $conn->prepare("SELECT id, name, license_plate FROM clients ORDER BY name");
-        $stmt->execute();
-        $clients = $stmt->fetchAll();
-        
-        if ($action === 'list') {
-            // Get all services with client information
-            $search = $_GET['search'] ?? '';
-            $search_param = '%' . $search . '%';
+    
+    // Obtener datos según la acción
+    switch ($action) {
+        case 'list':
+            // Filtros de búsqueda
+            $filter_date = $_GET['filter_date'] ?? '';
+            $filter_status = $_GET['filter_status'] ?? '';
+            $filter_client = $_GET['filter_client'] ?? '';
             
-            $where_clause = '';
+            // Construir consulta con filtros
+            $sql = "SELECT * FROM vista_servicios_completos WHERE 1=1";
             $params = [];
             
-            // Filter by client if specified
-            if ($client_id) {
-                $where_clause = 'WHERE s.client_id = ?';
-                $params[] = $client_id;
-            } elseif (!empty($search)) {
-                $where_clause = 'WHERE c.name LIKE ? OR c.license_plate LIKE ? OR s.service_type LIKE ?';
-                $params = [$search_param, $search_param, $search_param];
+            if (!empty($filter_date)) {
+                $sql .= " AND DATE(fecha_cita) = ?";
+                $params[] = $filter_date;
             }
             
-            $stmt = $conn->prepare("
-                SELECT s.*, c.name as client_name, c.license_plate 
-                FROM services s 
-                JOIN clients c ON s.client_id = c.id 
-                {$where_clause}
-                ORDER BY s.service_date DESC, s.service_time DESC
-            ");
+            if (!empty($filter_status)) {
+                $sql .= " AND estado = ?";
+                $params[] = $filter_status;
+            }
+            
+            if (!empty($filter_client)) {
+                $sql .= " AND cliente_nombre LIKE ?";
+                $params[] = '%' . $filter_client . '%';
+            }
+            
+            if (!empty($client_id)) {
+                $sql .= " AND cita_id IN (SELECT id FROM citas WHERE cliente_id = ?)";
+                $params[] = $client_id;
+            }
+            
+            $sql .= " ORDER BY fecha_cita DESC";
+            
+            $stmt = $conn->prepare($sql);
             $stmt->execute($params);
             $services = $stmt->fetchAll();
+            break;
             
-        } elseif ($action === 'edit' && $service_id) {
-            // Get specific service for editing
-            $stmt = $conn->prepare("
-                SELECT s.*, c.name as client_name 
-                FROM services s 
-                JOIN clients c ON s.client_id = c.id 
-                WHERE s.id = ?
-            ");
-            $stmt->execute([$service_id]);
-            $service = $stmt->fetch();
+        case 'add':
+        case 'edit':
+            // Obtener clientes para el select
+            $clients = getClients($conn);
             
-            if (!$service) {
-                $error_message = 'Service not found.';
-                $action = 'list';
+            // Obtener tipos de servicio
+            $service_types = getServiceTypes($conn);
+            
+            if ($action === 'edit' && $service_id) {
+                // Obtener datos de la cita específica
+                $stmt = $conn->prepare("
+                    SELECT c.*, cl.nombre as cliente_nombre, v.placa, ts.nombre as tipo_servicio
+                    FROM citas c
+                    JOIN clientes cl ON c.cliente_id = cl.id
+                    JOIN vehiculos v ON c.vehiculo_id = v.id
+                    JOIN tipos_servicio ts ON c.tipo_servicio_id = ts.id
+                    WHERE c.id = ?
+                ");
+                $stmt->execute([$service_id]);
+                $service = $stmt->fetch();
+                
+                if (!$service) {
+                    $error_message = 'Cita no encontrada';
+                    $action = 'list';
+                    break;
+                }
+                
+                // Obtener vehículos del cliente
+                $vehicles = getClientVehicles($conn, $service['cliente_id']);
+            } elseif ($client_id) {
+                // Si se especifica un cliente, obtener sus vehículos
+                $vehicles = getClientVehicles($conn, $client_id);
             }
-        }
-    } catch (Exception $e) {
-        error_log("Service fetch error: " . $e->getMessage());
-        $error_message = 'An error occurred while loading service data.';
+            break;
     }
+    
+} catch (Exception $e) {
+    $error_message = $e->getMessage();
+    error_log('Error en services.php: ' . $e->getMessage());
 }
+
+// Configurar acciones de página
+if ($action === 'add') {
+    $page_actions = '<a href="services.php" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Volver</a>';
+} elseif ($action === 'edit') {
+    $page_actions = '<a href="services.php" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Volver</a>';
+} else {
+    $page_actions = '<a href="services.php?action=add" class="btn btn-primary"><i class="bi bi-plus"></i> Nueva Cita</a>';
+}
+
+include 'includes/header.php';
 ?>
 
-<?php include 'includes/header.php'; ?>
-
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-    <h1 class="h2">
-        <i class="bi bi-gear"></i> 
-        <?php 
-        switch($action) {
-            case 'add': echo 'Add New Service'; break;
-            case 'edit': echo 'Edit Service'; break;
-            default: echo 'Service Management'; break;
-        }
-        ?>
-    </h1>
-    <div class="btn-toolbar mb-2 mb-md-0">
-        <?php if ($action === 'list'): ?>
-        <div class="btn-group me-2">
-            <a href="services.php?action=add" class="btn btn-primary">
-                <i class="bi bi-plus-circle"></i> Add New Service
-            </a>
-        </div>
-        <?php else: ?>
-        <div class="btn-group me-2">
-            <a href="services.php" class="btn btn-secondary">
-                <i class="bi bi-arrow-left"></i> Back to List
-            </a>
-        </div>
-        <?php endif; ?>
-    </div>
-</div>
-
+<!-- Mensajes de estado -->
 <?php if ($error_message): ?>
     <?php showError($error_message); ?>
 <?php endif; ?>
@@ -232,286 +266,353 @@ if ($conn) {
 <?php endif; ?>
 
 <?php if ($action === 'list'): ?>
-    <!-- Service List View -->
-    <div class="card">
-        <div class="card-header">
-            <div class="row align-items-center">
-                <div class="col">
-                    <h5 class="card-title mb-0">
-                        <?php if ($client_id && !empty($services)): ?>
-                            Services for <?php echo htmlspecialchars($services[0]['client_name']); ?> (<?php echo count($services); ?>)
-                        <?php else: ?>
-                            All Services (<?php echo count($services); ?>)
-                        <?php endif; ?>
-                    </h5>
-                </div>
-                <div class="col-auto">
-                    <div class="d-flex">
-                        <?php if ($client_id): ?>
-                        <a href="services.php" class="btn btn-outline-secondary me-2">
-                            <i class="bi bi-arrow-left"></i> All Services
-                        </a>
-                        <?php endif; ?>
-                        <form method="GET" action="services.php" class="d-flex">
-                            <?php if ($client_id): ?>
-                            <input type="hidden" name="client_id" value="<?php echo $client_id; ?>">
-                            <?php endif; ?>
-                            <input type="text" class="form-control me-2" name="search" 
-                                   placeholder="Search services..." value="<?php echo htmlspecialchars($_GET['search'] ?? ''); ?>">
-                            <button type="submit" class="btn btn-outline-primary">
-                                <i class="bi bi-search"></i>
-                            </button>
-                            <?php if (!empty($_GET['search'])): ?>
-                            <a href="services.php<?php echo $client_id ? '?client_id=' . $client_id : ''; ?>" class="btn btn-outline-secondary ms-2">
-                                <i class="bi bi-x"></i>
-                            </a>
-                            <?php endif; ?>
-                        </form>
-                    </div>
-                </div>
+<!-- Lista de Servicios -->
+<div class="card">
+    <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">
+                <i class="bi bi-calendar-check me-2"></i>Lista de Citas y Servicios
+            </h5>
+            <div class="d-flex gap-2">
+                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse">
+                    <i class="bi bi-funnel"></i> Filtros
+                </button>
             </div>
         </div>
-        <div class="card-body">
-            <?php if (empty($services)): ?>
-                <div class="text-center py-4">
-                    <i class="bi bi-gear display-4 text-muted"></i>
-                    <p class="text-muted mt-2">
-                        <?php 
-                        if (!empty($_GET['search'])) {
-                            echo 'No services found matching your search.';
-                        } elseif ($client_id) {
-                            echo 'No services found for this client.';
-                        } else {
-                            echo 'No services recorded yet.';
-                        }
-                        ?>
-                    </p>
-                    <a href="services.php?action=add<?php echo $client_id ? '&client_id=' . $client_id : ''; ?>" class="btn btn-primary">
-                        Add First Service
+    </div>
+    
+    <!-- Filtros -->
+    <div class="collapse" id="filterCollapse">
+        <div class="card-body border-bottom">
+            <form method="GET" class="row g-3">
+                <div class="col-md-3">
+                    <label for="filter_date" class="form-label">Fecha</label>
+                    <input type="date" class="form-control" id="filter_date" name="filter_date" 
+                           value="<?php echo htmlspecialchars($filter_date); ?>">
+                </div>
+                <div class="col-md-3">
+                    <label for="filter_status" class="form-label">Estado</label>
+                    <select class="form-select" id="filter_status" name="filter_status">
+                        <option value="">Todos los estados</option>
+                        <option value="programada" <?php echo $filter_status === 'programada' ? 'selected' : ''; ?>>Programada</option>
+                        <option value="completada" <?php echo $filter_status === 'completada' ? 'selected' : ''; ?>>Completada</option>
+                        <option value="cancelada" <?php echo $filter_status === 'cancelada' ? 'selected' : ''; ?>>Cancelada</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="filter_client" class="form-label">Cliente</label>
+                    <input type="text" class="form-control" id="filter_client" name="filter_client" 
+                           placeholder="Buscar por nombre de cliente" value="<?php echo htmlspecialchars($filter_client); ?>">
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="bi bi-search"></i> Buscar
+                    </button>
+                    <a href="services.php" class="btn btn-outline-secondary">
+                        <i class="bi bi-x"></i>
                     </a>
                 </div>
-            <?php else: ?>
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th>Client</th>
-                                <th>License Plate</th>
-                                <th>Service Type</th>
-                                <th>Cost</th>
-                                <th>Date</th>
-                                <th>Time</th>
-                                <th>Notes</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($services as $service): ?>
-                            <tr>
-                                <td>
-                                    <strong><?php echo htmlspecialchars($service['client_name']); ?></strong>
-                                </td>
-                                <td>
-                                    <span class="badge bg-secondary"><?php echo htmlspecialchars($service['license_plate']); ?></span>
-                                </td>
-                                <td>
-                                    <span class="badge bg-info text-dark"><?php echo ucfirst(str_replace('_', ' ', $service['service_type'])); ?></span>
-                                </td>
-                                <td>
-                                    <strong class="text-success"><?php echo formatCurrency($service['cost']); ?></strong>
-                                </td>
-                                <td><?php echo formatDate($service['service_date']); ?></td>
-                                <td><?php echo date('g:i A', strtotime($service['service_time'])); ?></td>
-                                <td>
-                                    <?php if ($service['notes']): ?>
-                                        <span title="<?php echo htmlspecialchars($service['notes']); ?>">
-                                            <?php echo htmlspecialchars(substr($service['notes'], 0, 30) . (strlen($service['notes']) > 30 ? '...' : '')); ?>
-                                        </span>
-                                    <?php else: ?>
-                                        <span class="text-muted">-</span>
-                                    <?php endif; ?>
-                                </td>
-                                <td>
-                                    <div class="btn-group btn-group-sm">
-                                        <a href="services.php?action=edit&id=<?php echo $service['id']; ?>" 
-                                           class="btn btn-outline-primary" title="Edit">
-                                            <i class="bi bi-pencil"></i>
-                                        </a>
-                                        <a href="services.php?action=delete&id=<?php echo $service['id']; ?>" 
-                                           class="btn btn-outline-danger" title="Delete"
-                                           onclick="return confirmDelete('Are you sure you want to delete this service?')">
-                                            <i class="bi bi-trash"></i>
-                                        </a>
-                                    </div>
-                                </td>
-                            </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
-                
-                <!-- Summary -->
-                <?php 
-                $total_services = count($services);
-                $total_income = array_sum(array_column($services, 'cost'));
-                ?>
-                <div class="row mt-3">
-                    <div class="col-md-6">
-                        <div class="card bg-light">
-                            <div class="card-body text-center">
-                                <h5>Total Services</h5>
-                                <h3 class="text-primary"><?php echo number_format($total_services); ?></h3>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="card bg-light">
-                            <div class="card-body text-center">
-                                <h5>Total Income</h5>
-                                <h3 class="text-success"><?php echo formatCurrency($total_income); ?></h3>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            <?php endif; ?>
+            </form>
         </div>
     </div>
+    
+    <div class="card-body">
+        <?php if (empty($services)): ?>
+            <div class="text-center py-5">
+                <i class="bi bi-calendar-x display-1 text-muted"></i>
+                <h4 class="mt-3">No hay servicios registrados</h4>
+                <p class="text-muted">Comience programando la primera cita</p>
+                <a href="services.php?action=add" class="btn btn-primary">
+                    <i class="bi bi-plus"></i> Nueva Cita
+                </a>
+            </div>
+        <?php else: ?>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Fecha y Hora</th>
+                            <th>Cliente</th>
+                            <th>Vehículo</th>
+                            <th>Servicio</th>
+                            <th>Precio</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($services as $service): ?>
+                        <tr>
+                            <td>
+                                <div>
+                                    <strong><?php echo formatDate($service['fecha_cita']); ?></strong><br>
+                                    <small class="text-muted"><?php echo date('g:i A', strtotime($service['fecha_cita'])); ?></small>
+                                </div>
+                            </td>
+                            <td>
+                                <div>
+                                    <strong><?php echo htmlspecialchars($service['cliente_nombre']); ?></strong><br>
+                                    <small class="text-muted">
+                                        <i class="bi bi-telephone me-1"></i><?php echo htmlspecialchars($service['cliente_telefono']); ?>
+                                    </small>
+                                </div>
+                            </td>
+                            <td>
+                                <div>
+                                    <span class="badge bg-dark"><?php echo htmlspecialchars($service['placa']); ?></span><br>
+                                    <small class="text-muted"><?php echo htmlspecialchars($service['marca'] . ' ' . $service['modelo']); ?></small>
+                                </div>
+                            </td>
+                            <td>
+                                <strong><?php echo htmlspecialchars($service['tipo_servicio']); ?></strong>
+                            </td>
+                            <td>
+                                <strong><?php echo formatCurrency($service['precio']); ?></strong>
+                            </td>
+                            <td>
+                                <?php
+                                $estado_class = '';
+                                $estado_icon = '';
+                                switch ($service['estado']) {
+                                    case 'completada':
+                                        $estado_class = 'bg-success';
+                                        $estado_icon = 'bi-check-circle';
+                                        break;
+                                    case 'programada':
+                                        $estado_class = 'bg-primary';
+                                        $estado_icon = 'bi-clock';
+                                        break;
+                                    case 'cancelada':
+                                        $estado_class = 'bg-danger';
+                                        $estado_icon = 'bi-x-circle';
+                                        break;
+                                    default:
+                                        $estado_class = 'bg-secondary';
+                                        $estado_icon = 'bi-question-circle';
+                                }
+                                ?>
+                                <span class="badge <?php echo $estado_class; ?>">
+                                    <i class="<?php echo $estado_icon; ?> me-1"></i>
+                                    <?php echo ucfirst($service['estado']); ?>
+                                </span>
+                            </td>
+                            <td>
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="dropdown">
+                                        <i class="bi bi-three-dots-vertical"></i>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li>
+                                            <a class="dropdown-item" href="services.php?action=edit&id=<?php echo $service['cita_id']; ?>">
+                                                <i class="bi bi-pencil me-2"></i>Editar
+                                            </a>
+                                        </li>
+                                        <?php if ($service['estado'] === 'programada'): ?>
+                                        <li>
+                                            <form method="POST" style="display: inline;">
+                                                <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
+                                                <button type="submit" class="dropdown-item" 
+                                                        onclick="return confirm('¿Marcar este servicio como completado?')"
+                                                        formaction="services.php?action=complete&id=<?php echo $service['cita_id']; ?>">
+                                                    <i class="bi bi-check-circle me-2"></i>Completar
+                                                </button>
+                                            </form>
+                                        </li>
+                                        <li>
+                                            <form method="POST" style="display: inline;">
+                                                <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
+                                                <button type="submit" class="dropdown-item text-warning" 
+                                                        onclick="return confirm('¿Cancelar este servicio?')"
+                                                        formaction="services.php?action=cancel&id=<?php echo $service['cita_id']; ?>">
+                                                    <i class="bi bi-x-circle me-2"></i>Cancelar
+                                                </button>
+                                            </form>
+                                        </li>
+                                        <?php endif; ?>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <a class="dropdown-item text-danger" 
+                                               href="services.php?action=delete&id=<?php echo $service['cita_id']; ?>"
+                                               onclick="return confirm('¿Está seguro de eliminar esta cita?')">
+                                                <i class="bi bi-trash me-2"></i>Eliminar
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
+    </div>
+</div>
 
 <?php elseif ($action === 'add' || $action === 'edit'): ?>
-    <!-- Add/Edit Service Form -->
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i class="bi bi-<?php echo $action === 'add' ? 'plus-circle' : 'pencil'; ?>"></i>
-                        <?php echo $action === 'add' ? 'Add New Service' : 'Edit Service'; ?>
-                    </h5>
+<!-- Formulario de Cita -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">
+            <i class="bi bi-calendar-plus me-2"></i>
+            <?php echo $action === 'add' ? 'Nueva Cita' : 'Editar Cita'; ?>
+        </h5>
+    </div>
+    <div class="card-body">
+        <form method="POST" id="serviceForm">
+            <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="cliente_id" class="form-label">Cliente *</label>
+                        <select class="form-select" id="cliente_id" name="cliente_id" required 
+                                onchange="loadClientVehicles(this.value)">
+                            <option value="">Seleccionar cliente</option>
+                            <?php foreach ($clients as $client): ?>
+                            <option value="<?php echo $client['id']; ?>" 
+                                    <?php echo ($client_id == $client['id'] || (isset($service) && $service['cliente_id'] == $client['id'])) ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($client['nombre']); ?>
+                            </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <?php if (empty($clients)): ?>
-                        <div class="alert alert-warning">
-                            <i class="bi bi-exclamation-triangle"></i>
-                            No clients found. Please <a href="clients.php?action=add">add a client</a> first.
-                        </div>
-                    <?php else: ?>
-                    <form method="POST" id="serviceForm" novalidate>
-                        <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
-                        
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="client_id" class="form-label">Client <span class="text-danger">*</span></label>
-                                <select class="form-select" id="client_id" name="client_id" required>
-                                    <option value="">Select Client</option>
-                                    <?php foreach ($clients as $client): ?>
-                                    <option value="<?php echo $client['id']; ?>" 
-                                            <?php echo ($service['client_id'] ?? $client_id) == $client['id'] ? 'selected' : ''; ?>>
-                                        <?php echo htmlspecialchars($client['name']); ?> (<?php echo htmlspecialchars($client['license_plate']); ?>)
-                                    </option>
-                                    <?php endforeach; ?>
-                                </select>
-                                <div class="invalid-feedback">
-                                    Please select a client.
-                                </div>
-                            </div>
-                            
-                            <div class="col-md-6 mb-3">
-                                <label for="service_type" class="form-label">Service Type <span class="text-danger">*</span></label>
-                                <select class="form-select" id="service_type" name="service_type" required>
-                                    <option value="">Select Service Type</option>
-                                    <?php foreach ($service_pricing as $type => $price): ?>
-                                    <option value="<?php echo $type; ?>" data-price="<?php echo $price; ?>"
-                                            <?php echo ($service['service_type'] ?? '') === $type ? 'selected' : ''; ?>>
-                                        <?php echo ucfirst(str_replace('_', ' ', $type)); ?> (<?php echo formatCurrency($price); ?>)
-                                    </option>
-                                    <?php endforeach; ?>
-                                </select>
-                                <div class="invalid-feedback">
-                                    Please select a service type.
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-4 mb-3">
-                                <label for="cost" class="form-label">Cost <span class="text-danger">*</span></label>
-                                <div class="input-group">
-                                    <span class="input-group-text">$</span>
-                                    <input type="number" class="form-control" id="cost" name="cost" 
-                                           value="<?php echo $service['cost'] ?? ''; ?>" 
-                                           required min="0" step="0.01" max="999.99">
-                                    <div class="invalid-feedback">
-                                        Please enter a valid cost.
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="col-md-4 mb-3">
-                                <label for="service_date" class="form-label">Service Date <span class="text-danger">*</span></label>
-                                <input type="date" class="form-control" id="service_date" name="service_date" 
-                                       value="<?php echo $service['service_date'] ?? date('Y-m-d'); ?>" 
-                                       required max="<?php echo date('Y-m-d'); ?>">
-                                <div class="invalid-feedback">
-                                    Please enter a valid service date.
-                                </div>
-                            </div>
-                            
-                            <div class="col-md-4 mb-3">
-                                <label for="service_time" class="form-label">Service Time <span class="text-danger">*</span></label>
-                                <input type="time" class="form-control" id="service_time" name="service_time" 
-                                       value="<?php echo $service['service_time'] ?? date('H:i'); ?>" 
-                                       required>
-                                <div class="invalid-feedback">
-                                    Please enter a valid service time.
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="notes" class="form-label">Notes</label>
-                            <textarea class="form-control" id="notes" name="notes" rows="3" maxlength="500"><?php echo htmlspecialchars($service['notes'] ?? ''); ?></textarea>
-                            <div class="form-text">Optional notes about the service (max 500 characters)</div>
-                        </div>
-                        
-                        <div class="d-flex justify-content-between">
-                            <a href="services.php" class="btn btn-secondary">
-                                <i class="bi bi-arrow-left"></i> Cancel
-                            </a>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-<?php echo $action === 'add' ? 'plus-circle' : 'check'; ?>"></i>
-                                <?php echo $action === 'add' ? 'Add Service' : 'Update Service'; ?>
-                            </button>
-                        </div>
-                    </form>
-                    <?php endif; ?>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="vehiculo_id" class="form-label">Vehículo *</label>
+                        <select class="form-select" id="vehiculo_id" name="vehiculo_id" required>
+                            <option value="">Seleccionar vehículo</option>
+                            <?php if (isset($vehicles)): ?>
+                                <?php foreach ($vehicles as $vehicle): ?>
+                                <option value="<?php echo $vehicle['id']; ?>"
+                                        <?php echo ($vehicle_id == $vehicle['id'] || (isset($service) && $service['vehiculo_id'] == $vehicle['id'])) ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($vehicle['placa'] . ' - ' . $vehicle['marca'] . ' ' . $vehicle['modelo']); ?>
+                                </option>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </select>
+                    </div>
                 </div>
             </div>
-        </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="tipo_servicio_id" class="form-label">Tipo de Servicio *</label>
+                        <select class="form-select" id="tipo_servicio_id" name="tipo_servicio_id" required>
+                            <option value="">Seleccionar servicio</option>
+                            <?php foreach ($service_types as $type): ?>
+                            <option value="<?php echo $type['id']; ?>" data-price="<?php echo $type['precio']; ?>"
+                                    <?php echo (isset($service) && $service['tipo_servicio_id'] == $type['id']) ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($type['nombre'] . ' - ' . formatCurrency($type['precio'])); ?>
+                            </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="mb-3">
+                        <label for="fecha_cita" class="form-label">Fecha *</label>
+                        <input type="date" class="form-control" id="fecha_cita" name="fecha_cita" 
+                               value="<?php echo isset($service) ? date('Y-m-d', strtotime($service['fecha_cita'])) : date('Y-m-d'); ?>" 
+                               min="<?php echo date('Y-m-d'); ?>" required>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="mb-3">
+                        <label for="hora_cita" class="form-label">Hora *</label>
+                        <input type="time" class="form-control" id="hora_cita" name="hora_cita" 
+                               value="<?php echo isset($service) ? date('H:i', strtotime($service['fecha_cita'])) : '09:00'; ?>" 
+                               required>
+                    </div>
+                </div>
+            </div>
+            
+            <?php if ($action === 'edit'): ?>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="estado" class="form-label">Estado</label>
+                        <select class="form-select" id="estado" name="estado">
+                            <option value="programada" <?php echo (isset($service) && $service['estado'] === 'programada') ? 'selected' : ''; ?>>Programada</option>
+                            <option value="completada" <?php echo (isset($service) && $service['estado'] === 'completada') ? 'selected' : ''; ?>>Completada</option>
+                            <option value="cancelada" <?php echo (isset($service) && $service['estado'] === 'cancelada') ? 'selected' : ''; ?>>Cancelada</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
+            
+            <div class="text-end">
+                <a href="services.php" class="btn btn-secondary me-2">Cancelar</a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check"></i> 
+                    <?php echo $action === 'add' ? 'Programar Cita' : 'Actualizar Cita'; ?>
+                </button>
+            </div>
+        </form>
     </div>
-    
-    <script>
-    // Form validation and auto-pricing
-    document.getElementById('serviceForm').addEventListener('submit', function(event) {
-        if (!validateForm('serviceForm')) {
-            event.preventDefault();
-            event.stopPropagation();
-        }
-    });
-    
-    // Auto-update cost when service type changes
-    document.getElementById('service_type').addEventListener('change', function() {
-        const selectedOption = this.options[this.selectedIndex];
-        const price = selectedOption.getAttribute('data-price');
-        if (price) {
-            document.getElementById('cost').value = parseFloat(price).toFixed(2);
-        }
-    });
-    
-    // Format cost input
-    document.getElementById('cost').addEventListener('blur', function() {
-        formatCurrencyInput(this);
-    });
-    </script>
+</div>
+
 <?php endif; ?>
+
+<script>
+// Cargar vehículos del cliente seleccionado
+function loadClientVehicles(clientId) {
+    const vehicleSelect = document.getElementById('vehiculo_id');
+    vehicleSelect.innerHTML = '<option value="">Cargando...</option>';
+    
+    if (!clientId) {
+        vehicleSelect.innerHTML = '<option value="">Seleccionar vehículo</option>';
+        return;
+    }
+    
+    fetch(`api/get_client_vehicles.php?client_id=${clientId}`)
+        .then(response => response.json())
+        .then(data => {
+            vehicleSelect.innerHTML = '<option value="">Seleccionar vehículo</option>';
+            data.forEach(vehicle => {
+                const option = document.createElement('option');
+                option.value = vehicle.id;
+                option.textContent = `${vehicle.placa} - ${vehicle.marca} ${vehicle.modelo}`;
+                vehicleSelect.appendChild(option);
+            });
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            vehicleSelect.innerHTML = '<option value="">Error al cargar vehículos</option>';
+        });
+}
+
+// Validación de formulario
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('serviceForm');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            if (!form.checkValidity()) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            form.classList.add('was-validated');
+        });
+    }
+    
+    // Auto-cargar vehículos si hay un cliente preseleccionado
+    const clientSelect = document.getElementById('cliente_id');
+    if (clientSelect && clientSelect.value) {
+        loadClientVehicles(clientSelect.value);
+    }
+});
+
+// Mostrar precio del servicio seleccionado
+document.getElementById('tipo_servicio_id')?.addEventListener('change', function() {
+    const selectedOption = this.options[this.selectedIndex];
+    const price = selectedOption.getAttribute('data-price');
+    if (price) {
+        console.log('Precio del servicio:', price);
+    }
+});
+</script>
 
 <?php include 'includes/footer.php'; ?>
