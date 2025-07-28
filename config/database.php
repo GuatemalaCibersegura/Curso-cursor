@@ -1,18 +1,18 @@
 <?php
 /**
  * Configuración de Base de Datos
- * Sistema de Control de Plataforma de Clientes - Car Wash Emanuel
+ * Car Wash Emanuel
  */
 
-// Configuración de la base de datos
+// Configuración para XAMPP en Mac
 define('DB_HOST', 'localhost');
 define('DB_NAME', 'carwash_emanuel');
 define('DB_USER', 'root');
-define('DB_PASS', '');
+define('DB_PASS', ''); // XAMPP por defecto no tiene contraseña
 define('DB_CHARSET', 'utf8mb4');
 
 /**
- * Clase de conexión a base de datos usando PDO
+ * Clase para manejar la conexión a la base de datos
  */
 class Database {
     private $host = DB_HOST;
@@ -24,25 +24,22 @@ class Database {
 
     /**
      * Obtener conexión a la base de datos
-     * @return PDO|null
      */
     public function getConnection() {
         $this->conn = null;
         
         try {
             $dsn = "mysql:host=" . $this->host . ";dbname=" . $this->db_name . ";charset=" . $this->charset;
-            $options = [
-                PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+            $this->conn = new PDO($dsn, $this->username, $this->password, [
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                PDO::ATTR_EMULATE_PREPARES   => false,
-            ];
-            
-            $this->conn = new PDO($dsn, $this->username, $this->password, $options);
+                PDO::ATTR_EMULATE_PREPARES => false
+            ]);
         } catch(PDOException $exception) {
             error_log("Error de conexión: " . $exception->getMessage());
             return null;
         }
-
+        
         return $this->conn;
     }
 }

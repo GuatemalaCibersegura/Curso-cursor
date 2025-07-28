@@ -38,29 +38,8 @@ foreach ($tables as $table) {
     }
 }
 
-// 3. Verificar estructura de la tabla usuarios
-echo "<h2>3. Verificando estructura de tabla usuarios</h2>";
-try {
-    $stmt = $pdo->query("DESCRIBE usuarios");
-    $columns = $stmt->fetchAll();
-    echo "<table border='1' style='border-collapse: collapse;'>";
-    echo "<tr><th>Campo</th><th>Tipo</th><th>Nulo</th><th>Clave</th><th>Por defecto</th></tr>";
-    foreach ($columns as $col) {
-        echo "<tr>";
-        echo "<td>{$col['Field']}</td>";
-        echo "<td>{$col['Type']}</td>";
-        echo "<td>{$col['Null']}</td>";
-        echo "<td>{$col['Key']}</td>";
-        echo "<td>{$col['Default']}</td>";
-        echo "</tr>";
-    }
-    echo "</table>";
-} catch (PDOException $e) {
-    echo "❌ Error al verificar estructura: " . $e->getMessage() . "<br>";
-}
-
-// 4. Verificar usuarios existentes
-echo "<h2>4. Verificando usuarios existentes</h2>";
+// 3. Verificar usuarios existentes
+echo "<h2>3. Verificando usuarios existentes</h2>";
 try {
     $stmt = $pdo->query("
         SELECT u.id, u.nombre_usuario, u.contrasena, u.rol_id, r.nombre as rol_nombre 
@@ -103,8 +82,8 @@ try {
     echo "❌ <strong>Error al consultar usuarios:</strong> " . $e->getMessage() . "<br>";
 }
 
-// 5. Probar verificación de contraseña
-echo "<h2>5. Probando verificación de contraseña</h2>";
+// 4. Probar verificación de contraseña
+echo "<h2>4. Probando verificación de contraseña</h2>";
 $test_password = 'admin123';
 $stored_hash = '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi';
 
@@ -117,8 +96,8 @@ if (password_verify($test_password, $stored_hash)) {
     echo "❌ <strong>Error en verificación de contraseña</strong><br>";
 }
 
-// 6. Simular proceso de login completo
-echo "<h2>6. Simulando proceso de login completo</h2>";
+// 5. Simular proceso de login completo
+echo "<h2>5. Simulando proceso de login completo</h2>";
 $username = 'admin';
 $password = 'admin123';
 
@@ -160,22 +139,6 @@ try {
     }
 } catch (PDOException $e) {
     echo "❌ <strong>Error en consulta de login:</strong> " . $e->getMessage() . "<br>";
-}
-
-// 7. Verificar archivo de configuración
-echo "<h2>7. Verificando archivos del sistema</h2>";
-$files_to_check = [
-    'config/database.php' => 'Configuración de base de datos',
-    'includes/functions.php' => 'Funciones del sistema',
-    'login.php' => 'Página de login'
-];
-
-foreach ($files_to_check as $file => $desc) {
-    if (file_exists($file)) {
-        echo "✅ <strong>$file</strong> - $desc<br>";
-    } else {
-        echo "❌ <strong>$file</strong> - $desc (No encontrado)<br>";
-    }
 }
 
 echo "<h2>🎯 Resumen y Próximos Pasos</h2>";
