@@ -68,12 +68,46 @@ function validateEmail($email) {
 }
 
 /**
- * Validar número de teléfono (validación básica)
+ * Validar número de teléfono guatemalteco (+502)
  * @param string $phone
  * @return bool
  */
 function validatePhone($phone) {
-    return preg_match('/^[\+]?[0-9\-\(\)\s]+$/', $phone);
+    // Limpiar el número
+    $phone = preg_replace('/[\s\-\(\)]/', '', $phone);
+    
+    // Formatos válidos para Guatemala:
+    // +50212345678 (8 dígitos después del código)
+    // 50212345678 (sin +)
+    // 12345678 (solo número local de 8 dígitos)
+    // 23456789 (número fijo de 8 dígitos)
+    
+    return preg_match('/^(\+502|502)?[2-7][0-9]{7}$/', $phone);
+}
+
+/**
+ * Formatear número de teléfono guatemalteco
+ * @param string $phone
+ * @return string
+ */
+function formatPhone($phone) {
+    // Limpiar el número
+    $phone = preg_replace('/[\s\-\(\)]/', '', $phone);
+    
+    // Si ya tiene código de país, mantenerlo
+    if (preg_match('/^(\+502|502)([2-7][0-9]{7})$/', $phone, $matches)) {
+        $number = $matches[2];
+        return '+502 ' . substr($number, 0, 4) . '-' . substr($number, 4);
+    }
+    
+    // Si es solo el número local (8 dígitos)
+    if (preg_match('/^([2-7][0-9]{7})$/', $phone, $matches)) {
+        $number = $matches[1];
+        return '+502 ' . substr($number, 0, 4) . '-' . substr($number, 4);
+    }
+    
+    // Si no coincide con el formato, devolver tal como está
+    return $phone;
 }
 
 /**
@@ -107,12 +141,12 @@ function verifyCSRFToken($token) {
 }
 
 /**
- * Formatear moneda
+ * Formatear moneda en Quetzales Guatemaltecos
  * @param float $amount
  * @return string
  */
 function formatCurrency($amount) {
-    return '₡' . number_format($amount, 2);
+    return 'Q' . number_format($amount, 2);
 }
 
 /**

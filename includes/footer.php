@@ -57,6 +57,38 @@
             }
         }
         
+        // Función para formatear número de teléfono guatemalteco
+        function formatPhoneInput(input) {
+            let value = input.value.replace(/\D/g, ''); // Remover todo excepto números
+            
+            // Si empieza con 502, agregar el +
+            if (value.startsWith('502') && value.length > 3) {
+                value = '+502' + value.substring(3);
+            }
+            // Si no tiene código de país y tiene 8 dígitos, agregar +502
+            else if (value.length === 8 && /^[2-7]/.test(value)) {
+                value = '+502' + value;
+            }
+            // Si ya tiene +502
+            else if (value.startsWith('+502')) {
+                // Ya está bien
+            }
+            // Si solo tiene números locales
+            else if (value.length <= 8) {
+                // Mantener solo los números
+            }
+            
+            // Formatear con guión
+            if (value.startsWith('+502') && value.length >= 8) {
+                const phone = value.substring(4); // Quitar +502
+                if (phone.length >= 4) {
+                    value = '+502 ' + phone.substring(0, 4) + '-' + phone.substring(4, 8);
+                }
+            }
+            
+            input.value = value;
+        }
+        
         // Auto-cerrar alertas después de 5 segundos
         document.addEventListener('DOMContentLoaded', function() {
             const alerts = document.querySelectorAll('.alert:not(.alert-permanent)');

@@ -331,7 +331,7 @@ include 'includes/header.php';
                             </td>
                             <td>
                                 <i class="bi bi-telephone me-1"></i>
-                                <?php echo htmlspecialchars($client['telefono']); ?>
+                                <?php echo htmlspecialchars(formatPhone($client['telefono'])); ?>
                             </td>
                             <td>
                                 <?php if ($client['correo']): ?>
@@ -406,7 +406,9 @@ include 'includes/header.php';
                         <label for="telefono" class="form-label">Teléfono *</label>
                         <input type="tel" class="form-control" id="telefono" name="telefono" 
                                value="<?php echo htmlspecialchars($client['telefono'] ?? ''); ?>" 
-                               required maxlength="20" placeholder="+506 8888-1234">
+                               required maxlength="20" placeholder="+502 1234-5678"
+                               onblur="formatPhoneInput(this)">
+                        <div class="form-text">Formato: +502 1234-5678 o 12345678</div>
                     </div>
                 </div>
             </div>
@@ -455,8 +457,8 @@ include 'includes/header.php';
                 
                 <div class="mb-3">
                     <strong><i class="bi bi-telephone me-2"></i>Teléfono:</strong><br>
-                    <a href="tel:<?php echo $client['telefono']; ?>" class="text-decoration-none">
-                        <?php echo htmlspecialchars($client['telefono']); ?>
+                                                <a href="tel:<?php echo $client['telefono']; ?>" class="text-decoration-none">
+                                <?php echo htmlspecialchars(formatPhone($client['telefono'])); ?>
                     </a>
                 </div>
                 
