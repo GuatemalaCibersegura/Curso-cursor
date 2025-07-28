@@ -1,10 +1,19 @@
-# Car Wash Emanuel - Configuración Apache Simplificada
+# Car Wash Emanuel - Configuración Apache
+# Archivo .htaccess limpio y funcional
 
 # Configurar página de inicio por defecto
 DirectoryIndex index.php index.html
 
-# Configurar PHP básico
+# Habilitar display de errores para desarrollo
 <IfModule mod_php.c>
     php_flag display_errors On
     php_value error_reporting E_ALL
 </IfModule>
+
+# Configurar tipos MIME básicos
+AddType application/x-httpd-php .php
+
+# Permitir acceso a archivos comunes
+<FilesMatch "\.(php|html|css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$">
+    Require all granted
+</FilesMatch>
