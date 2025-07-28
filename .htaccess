@@ -1,0 +1,51 @@
+# Car Wash Emanuel - Configuración Apache
+# Permitir acceso a todos los archivos
+
+# Habilitar reescritura de URLs
+RewriteEngine On
+
+# Permitir acceso desde cualquier origen
+Order allow,deny
+Allow from all
+
+# Configurar tipos de archivo permitidos
+<FilesMatch "\.(php|html|css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$">
+    Order allow,deny
+    Allow from all
+</FilesMatch>
+
+# Configurar página de inicio por defecto
+DirectoryIndex index.php index.html
+
+# Configurar PHP
+<IfModule mod_php.c>
+    php_flag display_errors On
+    php_value error_reporting "E_ALL & ~E_NOTICE & ~E_STRICT & ~E_DEPRECATED"
+    php_value max_execution_time 300
+    php_value memory_limit 256M
+    php_value post_max_size 50M
+    php_value upload_max_filesize 50M
+</IfModule>
+
+# Configurar headers de seguridad
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options nosniff
+    Header always set X-Frame-Options DENY
+    Header always set X-XSS-Protection "1; mode=block"
+</IfModule>
+
+# Proteger archivos sensibles
+<FilesMatch "\.(sql|log|md)$">
+    Order deny,allow
+    Deny from all
+    Allow from 127.0.0.1
+    Allow from ::1
+</FilesMatch>
+
+# Permitir acceso a archivos de configuración solo desde localhost
+<FilesMatch "^(config|includes)/">
+    Order deny,allow
+    Deny from all
+    Allow from 127.0.0.1
+    Allow from ::1
+</FilesMatch>
