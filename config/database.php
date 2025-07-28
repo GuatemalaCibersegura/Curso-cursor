@@ -1,18 +1,18 @@
 <?php
 /**
- * Database Configuration File
- * Car Wash Client Platform Control System
+ * Configuración de Base de Datos
+ * Sistema de Control de Plataforma de Clientes - Car Wash Emanuel
  */
 
-// Database configuration
+// Configuración de la base de datos
 define('DB_HOST', 'localhost');
-define('DB_NAME', 'carwash_system');
+define('DB_NAME', 'carwash_emanuel');
 define('DB_USER', 'root');
 define('DB_PASS', '');
 define('DB_CHARSET', 'utf8mb4');
 
 /**
- * Database connection class using PDO
+ * Clase de conexión a base de datos usando PDO
  */
 class Database {
     private $host = DB_HOST;
@@ -23,7 +23,7 @@ class Database {
     private $conn;
 
     /**
-     * Get database connection
+     * Obtener conexión a la base de datos
      * @return PDO|null
      */
     public function getConnection() {
@@ -39,7 +39,7 @@ class Database {
             
             $this->conn = new PDO($dsn, $this->username, $this->password, $options);
         } catch(PDOException $exception) {
-            error_log("Connection error: " . $exception->getMessage());
+            error_log("Error de conexión: " . $exception->getMessage());
             return null;
         }
 
