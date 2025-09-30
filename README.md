@@ -1,309 +1,207 @@
-# Car Wash Emanuel - Sistema de Control de Plataforma de Clientes
+# EZVIZ EB8 4G - Visualizador Web
 
-![Car Wash Emanuel](https://img.shields.io/badge/Car%20Wash-Emanuel-blue)
-![PHP](https://img.shields.io/badge/PHP-8.0%2B-777BB4)
-![MySQL](https://img.shields.io/badge/MySQL-8.0%2B-4479A1)
-![Bootstrap](https://img.shields.io/badge/Bootstrap-5.3-7952B3)
+Un sitio web moderno y responsive para visualizar en tiempo real el stream de tu cámara EZVIZ EB8 4G directamente desde el navegador.
 
-Sistema completo de gestión de clientes, servicios y reportes para Car Wash Emanuel, desarrollado en PHP y MySQL con una interfaz moderna usando Bootstrap 5.
+## 🚀 Características
 
-## 📋 Características Principales
+- ✅ **Streaming en vivo** - Visualización en tiempo real del feed de la cámara
+- ✅ **Interfaz moderna** - Diseño responsive y fácil de usar
+- ✅ **Autenticación segura** - Sistema de login con JWT
+- ✅ **Control de stream** - Iniciar/detener transmisión desde la web
+- ✅ **Pantalla completa** - Modo fullscreen para mejor visualización
+- ✅ **Información en tiempo real** - Estado de conexión y estadísticas
+- ✅ **Notificaciones** - Alertas visuales del estado del sistema
+- ✅ **Compatibilidad móvil** - Funciona en dispositivos móviles
 
-### 🔐 Sistema de Autenticación
-- **Roles separados**: Administrador y Personal
-- **Sesiones seguras** con tokens CSRF
-- **Contraseñas encriptadas** con bcrypt
+## 📋 Requisitos Previos
 
-### 👥 Gestión de Clientes
-- Registro completo de clientes con información de contacto
-- Gestión de múltiples vehículos por cliente
-- Historial completo de servicios
-- Búsqueda y filtrado avanzado
+### Software Necesario
+- **Node.js** (versión 16 o superior)
+- **FFmpeg** (para conversión de video)
+- **npm** o **yarn**
 
-### 🚗 Gestión de Vehículos
-- Registro detallado: placa, marca, modelo, año, color
-- Asociación automática con clientes
-- Validación de placas únicas
+### Instalación de FFmpeg
 
-### 📅 Sistema de Citas y Servicios
-- Programación de citas con fecha y hora
-- Múltiples tipos de servicio con precios configurables
-- Estados de cita: Programada, Completada, Cancelada
-- Gestión de servicios en tiempo real
-
-### 📊 Reportes Completos
-- **Dashboard interactivo** con estadísticas en tiempo real
-- **Reportes de ingresos**: diarios, semanales, mensuales
-- **Análisis de servicios** más populares
-- **Clientes más activos** y estadísticas de fidelidad
-- **Gráficos interactivos** con Chart.js
-
-### 🎨 Interfaz Moderna
-- **Diseño responsive** con Bootstrap 5
-- **Tema personalizado** con gradientes y animaciones
-- **Iconos Bootstrap Icons** para mejor UX
-- **Navegación intuitiva** y accesible
-
-## 🛠️ Tecnologías Utilizadas
-
-- **Backend**: PHP 8.0+
-- **Base de Datos**: MySQL 8.0+
-- **Frontend**: HTML5, CSS3, JavaScript ES6
-- **Framework CSS**: Bootstrap 5.3
-- **Gráficos**: Chart.js
-- **Iconos**: Bootstrap Icons
-- **Seguridad**: PDO con sentencias preparadas, CSRF tokens
-
-## 📁 Estructura del Proyecto
-
-```
-carwash-emanuel/
-├── api/                          # Endpoints API
-│   ├── get_client_vehicles.php   # Obtener vehículos por cliente
-│   └── ping.php                  # Mantener sesión activa
-├── config/                       # Configuración
-│   └── database.php              # Configuración de BD
-├── includes/                     # Archivos compartidos
-│   ├── functions.php             # Funciones auxiliares
-│   ├── header.php                # Header común
-│   └── footer.php                # Footer común
-├── logs/                         # Logs del sistema
-│   └── activity.log              # Log de actividades
-├── database.sql                  # Script de base de datos
-├── index.php                     # Página principal
-├── login.php                     # Módulo de login
-├── logout.php                    # Cerrar sesión
-├── dashboard.php                 # Dashboard principal
-├── clients.php                   # Gestión de clientes
-├── services.php                  # Gestión de servicios
-├── reports.php                   # Módulo de reportes
-├── users.php                     # Gestión de usuarios (admin)
-└── README.md                     # Este archivo
-```
-
-## 🚀 Instalación
-
-### Requisitos Previos
-
-- **Servidor web** (Apache/Nginx)
-- **PHP 8.0 o superior**
-- **MySQL 8.0 o superior**
-- **Extensiones PHP**: PDO, PDO_MySQL, mbstring, openssl
-
-### Paso 1: Clonar el Repositorio
-
+#### Ubuntu/Debian:
 ```bash
-git clone https://github.com/tu-usuario/carwash-emanuel.git
-cd carwash-emanuel
+sudo apt update
+sudo apt install ffmpeg
 ```
 
-### Paso 2: Configurar la Base de Datos
-
-1. Crear la base de datos:
-```sql
-CREATE DATABASE carwash_emanuel;
-```
-
-2. Importar el esquema:
+#### CentOS/RHEL:
 ```bash
-mysql -u root -p carwash_emanuel < database.sql
+sudo yum install epel-release
+sudo yum install ffmpeg
 ```
 
-### Paso 3: Configurar la Conexión
-
-Editar `config/database.php` con tus credenciales:
-
-```php
-define('DB_HOST', 'localhost');
-define('DB_NAME', 'carwash_emanuel');
-define('DB_USER', 'tu_usuario');
-define('DB_PASS', 'tu_contraseña');
-```
-
-### Paso 4: Configurar Permisos
-
+#### macOS:
 ```bash
-chmod 755 logs/
-chmod 644 logs/activity.log
+brew install ffmpeg
 ```
 
-### Paso 5: Acceder al Sistema
+#### Windows:
+1. Descargar desde [https://ffmpeg.org/download.html](https://ffmpeg.org/download.html)
+2. Extraer y agregar al PATH del sistema
 
-1. Abrir en el navegador: `http://tu-servidor/carwash-emanuel`
-2. Usar las credenciales por defecto:
-   - **Usuario**: `admin`
-   - **Contraseña**: `admin123`
+## 🛠️ Instalación
 
-## 📖 Guía de Uso
-
-### Primer Acceso
-
-1. **Iniciar sesión** con las credenciales de administrador
-2. **Cambiar la contraseña** por defecto (recomendado)
-3. **Configurar tipos de servicio** según tu negocio
-4. **Agregar el primer cliente** y su vehículo
-
-### Gestión Diaria
-
-#### Registrar un Cliente
-1. Ir a **Clientes** → **Nuevo Cliente**
-2. Completar información personal
-3. Agregar vehículo(s) del cliente
-4. Guardar registro
-
-#### Programar una Cita
-1. Ir a **Servicios** → **Nueva Cita**
-2. Seleccionar cliente y vehículo
-3. Elegir tipo de servicio
-4. Definir fecha y hora
-5. Confirmar cita
-
-#### Completar un Servicio
-1. Ir a **Servicios** → Buscar la cita
-2. Marcar como **Completada**
-3. El ingreso se registra automáticamente
-
-#### Ver Reportes
-1. Ir a **Reportes**
-2. Seleccionar tipo de reporte:
-   - Dashboard general
-   - Ingresos por período
-   - Servicios populares
-   - Clientes activos
-   - Estadísticas de vehículos
-
-## 🔧 Configuración Avanzada
-
-### Tipos de Servicio
-
-Los tipos de servicio se configuran directamente en la base de datos:
-
-```sql
-INSERT INTO tipos_servicio (nombre, descripcion, precio, duracion) VALUES
-('Lavado Express', 'Lavado rápido exterior', 10.00, 20),
-('Lavado Completo', 'Exterior e interior', 20.00, 45),
-('Detallado Premium', 'Servicio completo con encerado', 50.00, 90);
-```
-
-### Roles de Usuario
-
-- **admin**: Acceso completo al sistema
-- **personal**: Acceso limitado (sin gestión de usuarios)
-
-### Backup de Base de Datos
-
+1. **Clonar o descargar el proyecto**
 ```bash
-mysqldump -u root -p carwash_emanuel > backup_$(date +%Y%m%d).sql
+git clone <url-del-repositorio>
+cd ezviz-eb8-web-viewer
 ```
 
-## 🛡️ Seguridad
-
-### Medidas Implementadas
-
-- **Autenticación obligatoria** en todas las páginas
-- **Tokens CSRF** en todos los formularios
-- **Sentencias preparadas** para prevenir SQL injection
-- **Validación de entrada** en servidor y cliente
-- **Sesiones seguras** con timeout automático
-- **Logging de actividades** para auditoría
-
-### Recomendaciones
-
-1. **Cambiar contraseñas por defecto**
-2. **Usar HTTPS en producción**
-3. **Actualizar PHP y MySQL regularmente**
-4. **Hacer backups periódicos**
-5. **Revisar logs de actividad**
-
-## 📊 Estructura de Base de Datos
-
-### Tablas Principales
-
-- **roles**: Roles del sistema
-- **usuarios**: Usuarios del sistema
-- **clientes**: Información de clientes
-- **vehiculos**: Vehículos de los clientes
-- **tipos_servicio**: Tipos de servicios disponibles
-- **citas**: Citas/servicios programados
-- **articulos_inventario**: Inventario (opcional)
-- **transacciones_inventario**: Movimientos de inventario
-- **reportes**: Reportes generados
-
-### Relaciones
-
-```
-usuarios (1) → (N) reportes
-roles (1) → (N) usuarios
-clientes (1) → (N) vehiculos
-clientes (1) → (N) citas
-vehiculos (1) → (N) citas
-tipos_servicio (1) → (N) citas
+2. **Instalar dependencias**
+```bash
+npm install
 ```
 
-## 🔄 API Endpoints
-
-### Obtener Vehículos de Cliente
-```
-GET /api/get_client_vehicles.php?client_id={id}
+3. **Configurar variables de entorno**
+```bash
+cp .env.example .env
 ```
 
-### Mantener Sesión Activa
+4. **Editar el archivo .env con tu configuración:**
+```env
+# Configuración de la cámara EZVIZ EB8 4G
+CAMERA_IP=192.168.1.100          # IP de tu cámara
+CAMERA_USERNAME=admin            # Usuario de la cámara
+CAMERA_PASSWORD=tu_password      # Contraseña de la cámara
+RTSP_PORT=554                    # Puerto RTSP (generalmente 554)
+RTSP_STREAM_PATH=/h264Preview_01_main  # Ruta del stream
+
+# Configuración del servidor
+PORT=3000                        # Puerto del servidor web
+JWT_SECRET=tu_jwt_secret_muy_seguro_aqui
+
+# Credenciales de acceso web
+WEB_USERNAME=admin               # Usuario para acceder a la web
+WEB_PASSWORD=password123         # Contraseña para acceder a la web
 ```
-GET /api/ping.php
+
+## 🔧 Configuración de la Cámara EZVIZ EB8 4G
+
+### 1. Obtener la IP de la cámara
+- Abre la app EZVIZ en tu móvil
+- Ve a configuración de la cámara
+- Busca la información de red/WiFi
+- Anota la dirección IP asignada
+
+### 2. Habilitar RTSP (si está disponible)
+- En la app EZVIZ, ve a configuración avanzada
+- Busca opciones de "Streaming" o "RTSP"
+- Habilita el protocolo RTSP si está disponible
+
+### 3. Configurar credenciales
+- Usa las mismas credenciales que tienes en la app EZVIZ
+- Por defecto suele ser `admin` como usuario
+
+### 4. Formatos de URL RTSP comunes para EZVIZ:
+```
+rtsp://usuario:contraseña@IP:554/h264Preview_01_main
+rtsp://usuario:contraseña@IP:554/h264Preview_01_sub
+rtsp://usuario:contraseña@IP:554/
 ```
 
-## 🐛 Solución de Problemas
+## 🚀 Uso
 
-### Error de Conexión a BD
-- Verificar credenciales en `config/database.php`
-- Comprobar que MySQL esté ejecutándose
-- Verificar que la base de datos existe
+### 1. Iniciar el servidor
+```bash
+npm start
+```
 
-### Sesión Expirada Constantemente
-- Verificar configuración de sesiones en PHP
-- Comprobar permisos de escritura en `/tmp`
+### 2. Acceder a la aplicación
+Abre tu navegador y ve a: `http://localhost:3000`
 
-### Gráficos No Se Muestran
-- Verificar que Chart.js se carga correctamente
-- Comprobar consola del navegador por errores JavaScript
+### 3. Iniciar sesión
+- Usuario: `admin` (o el que configuraste en .env)
+- Contraseña: `password123` (o la que configuraste en .env)
 
-## 📝 Registro de Cambios
+### 4. Controlar el stream
+- Haz clic en "Iniciar Stream" para comenzar la transmisión
+- Usa "Pantalla Completa" para mejor visualización
+- "Actualizar" para reiniciar la conexión si hay problemas
 
-### v1.0.0 (2024-01-15)
-- ✅ Sistema de autenticación completo
-- ✅ Gestión de clientes y vehículos
-- ✅ Sistema de citas y servicios
-- ✅ Módulo de reportes con gráficos
-- ✅ Dashboard interactivo
-- ✅ Interfaz responsive moderna
-- ✅ API para funcionalidades AJAX
-- ✅ Sistema de logging
+## 🔧 Desarrollo
 
-## 🤝 Contribuir
+### Ejecutar en modo desarrollo
+```bash
+npm run dev
+```
 
-1. Fork el proyecto
-2. Crear una rama para tu feature (`git checkout -b feature/AmazingFeature`)
-3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
-4. Push a la rama (`git push origin feature/AmazingFeature`)
-5. Abrir un Pull Request
+### Estructura del proyecto
+```
+ezviz-eb8-web-viewer/
+├── server.js              # Servidor principal
+├── package.json           # Dependencias
+├── .env.example          # Configuración de ejemplo
+├── README.md             # Este archivo
+└── public/               # Archivos estáticos
+    ├── index.html        # Interfaz principal
+    ├── styles.css        # Estilos CSS
+    ├── app.js           # JavaScript del cliente
+    └── hls/             # Archivos de streaming (generados automáticamente)
+```
+
+## 🔍 Solución de Problemas
+
+### Error: "No se puede conectar a la cámara"
+1. Verifica que la IP de la cámara sea correcta
+2. Asegúrate de que la cámara esté en la misma red
+3. Verifica las credenciales de usuario/contraseña
+4. Comprueba que el puerto RTSP esté abierto
+
+### Error: "FFmpeg no encontrado"
+1. Instala FFmpeg siguiendo las instrucciones de arriba
+2. Verifica que esté en el PATH: `ffmpeg -version`
+3. Reinicia el servidor después de instalar FFmpeg
+
+### El video no se reproduce
+1. Verifica que tu navegador soporte HLS
+2. Intenta con un navegador diferente (Chrome, Firefox, Safari)
+3. Revisa la consola del navegador para errores
+4. Asegúrate de que el stream esté activo
+
+### Problemas de rendimiento
+1. Reduce la calidad del stream en la configuración de la cámara
+2. Asegúrate de tener buena conexión de red
+3. Cierra otras aplicaciones que usen la cámara
+
+## 📱 Compatibilidad
+
+### Navegadores soportados:
+- ✅ Chrome 70+
+- ✅ Firefox 65+
+- ✅ Safari 12+
+- ✅ Edge 79+
+- ✅ Navegadores móviles modernos
+
+### Dispositivos:
+- ✅ PC/Mac
+- ✅ Tablets
+- ✅ Smartphones
+- ✅ Smart TVs con navegador
+
+## 🔒 Seguridad
+
+- Autenticación JWT con tokens seguros
+- Rate limiting para prevenir ataques
+- Variables de entorno para credenciales sensibles
+- Validación de entrada en todas las rutas
+
+## 📞 Soporte
+
+Si tienes problemas:
+
+1. **Revisa los logs del servidor** - Información útil en la consola
+2. **Verifica la configuración** - Especialmente IP y credenciales
+3. **Prueba la conexión RTSP** - Usa VLC para probar: `rtsp://usuario:contraseña@IP:554/`
+4. **Consulta la documentación de EZVIZ** - Para configuración específica de tu modelo
 
 ## 📄 Licencia
 
-Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más detalles.
-
-## 👨‍💻 Autor
-
-**Car Wash Emanuel System**
-- Sistema desarrollado para la gestión integral de servicios de lavado de vehículos
-- Contacto: [tu-email@ejemplo.com]
-
-## 🙏 Agradecimientos
-
-- Bootstrap team por el framework CSS
-- Chart.js por la librería de gráficos
-- Bootstrap Icons por los iconos
-- Comunidad PHP por las mejores prácticas
+MIT License - Puedes usar, modificar y distribuir libremente.
 
 ---
 
-**¡Gracias por usar Car Wash Emanuel System!** 🚗✨
+**Nota:** Este proyecto es independiente y no está afiliado oficialmente con EZVIZ. Es una solución de terceros para integrar cámaras EZVIZ en aplicaciones web.
