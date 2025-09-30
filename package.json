@@ -1,0 +1,32 @@
+{
+  "name": "ezviz-eb8-web-viewer",
+  "version": "1.0.0",
+  "description": "Sitio web para visualizar en vivo la cámara EZVIZ EB8 4G",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.7.2",
+    "fluent-ffmpeg": "^2.1.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "express-rate-limit": "^6.10.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "keywords": [
+    "ezviz",
+    "camera",
+    "streaming",
+    "rtsp",
+    "web"
+  ],
+  "author": "Tu Nombre",
+  "license": "MIT"
+}
